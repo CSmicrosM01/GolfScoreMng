@@ -114,6 +114,114 @@ body {
     box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
 }
 
+/* ログイン画面の統計表示 */
+.login-stats {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.login-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.login-stat-item {
+    background: var(--background);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.login-stat-item h4 {
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.login-stat-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.login-stat-value .stat-number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.login-stat-value .stat-holder {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.login-ranking-list {
+    /* 6人全員表示 */
+}
+
+.login-rank-item {
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    gap: 0.5rem;
+}
+
+.login-rank-item:last-child {
+    border-bottom: none;
+}
+
+.login-rank-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+}
+
+.login-rank-badge.rank-1 {
+    background: var(--gold);
+    color: #333;
+}
+
+.login-rank-badge.rank-2 {
+    background: var(--silver);
+    color: #333;
+}
+
+.login-rank-badge.rank-3 {
+    background: var(--bronze);
+    color: white;
+}
+
+.login-rank-num {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.login-rank-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.login-rank-avg {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
 /* ヘッダー */
 header {
     background: var(--primary-color);
@@ -892,6 +1000,20 @@ main {
     .user-btn {
         padding: 0.75rem 1rem;
         font-size: 1rem;
+    }
+
+    /* ログイン画面統計 - スマホ */
+    .login-stats {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+    }
+
+    .login-stat-item {
+        padding: 0.75rem;
+    }
+
+    .login-stat-value .stat-number {
+        font-size: 1.5rem;
     }
 
     header {

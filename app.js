@@ -41,6 +41,9 @@ async function initApp() {
     // ユーザーボタン生成
     generateUserButtons();
 
+    // ログイン画面の統計表示
+    updateLoginStats();
+
     // イベントリスナー設定
     setupEventListeners();
 }
@@ -290,6 +293,71 @@ function generateUserButtons() {
         btn.addEventListener('click', () => login(user));
         container.appendChild(btn);
     });
+}
+
+// ===== ログイン画面の統計表示 =====
+function updateLoginStats() {
+    const data = appState.data;
+    const year = appState.currentYear;
+    const yearData = data.years[year];
+
+    if (!yearData) return;
+
+    const rounds = yearData.rounds;
+    const validRounds = rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
+
+    // 総合ランキング（ハンディ適用）
+    const rankings = USERS.map(user => {
+        const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].score);
+        const scores = userRounds.map(r => {
+            let score = r.scores[user].score;
+            score -= (data.handicaps[user] || 0);
+            return score;
+        });
+
+        return {
+            user,
+            rounds: userRounds.length,
+            average: scores.length >= MIN_ROUNDS ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
+            isValid: scores.length >= MIN_ROUNDS
+        };
+    }).filter(r => r.isValid)
+      .sort((a, b) => a.average - b.average);
+
+    // 同率順位を計算
+    let currentRank = 1;
+    let prevAverage = null;
+    rankings.forEach((r, i) => {
+        if (prevAverage !== null && r.average.toFixed(1) !== prevAverage.toFixed(1)) {
+            currentRank = i + 1;
+        }
+        r.rank = currentRank;
+        prevAverage = r.average;
+    });
+
+    // ランキング表示（6位まで）
+    const rankingList = document.getElementById('login-ranking-list');
+    if (rankingList) {
+        if (rankings.length > 0) {
+            const top6 = rankings.slice(0, 6);
+            rankingList.innerHTML = top6.map(r => {
+                const badge = r.rank <= 3 ? `<span class="login-rank-badge rank-${r.rank}">${r.rank}</span>` : `<span class="login-rank-num">${r.rank}</span>`;
+                return `<div class="login-rank-item">${badge}<span class="login-rank-name">${withSan(r.user)}</span><span class="login-rank-avg">${r.average.toFixed(1)}</span></div>`;
+            }).join('');
+        } else {
+            rankingList.innerHTML = '<div class="no-data">データなし</div>';
+        }
+    }
+
+    // ベストスコア
+    const bestScore = getBestScore(rounds);
+    document.getElementById('login-best-score').textContent = bestScore.score || '-';
+    document.getElementById('login-best-score-holder').textContent = bestScore.user ? withSan(bestScore.user) : '-';
+
+    // ベストパット平均
+    const bestPutt = getBestPuttAverage(rounds);
+    document.getElementById('login-best-putt').textContent = bestPutt.average ? bestPutt.average.toFixed(2) : '-';
+    document.getElementById('login-best-putt-holder').textContent = bestPutt.user ? withSan(bestPutt.user) : '-';
 }
 
 // ===== ログイン/ログアウト =====
