@@ -1,0 +1,1252 @@
+/* リセット & 基本設定 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #2e7d32;
+    --primary-dark: #1b5e20;
+    --primary-light: #4caf50;
+    --secondary-color: #1565c0;
+    --gold: #ffd700;
+    --silver: #c0c0c0;
+    --bronze: #cd7f32;
+    --danger: #d32f2f;
+    --warning: #f57c00;
+    --background: #f5f5f5;
+    --card-bg: #ffffff;
+    --text-primary: #212121;
+    --text-secondary: #757575;
+    --border-color: #e0e0e0;
+}
+
+body {
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    background-color: var(--background);
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+/* スクリーン制御 */
+.screen {
+    min-height: 100vh;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ログイン画面 */
+#login-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+}
+
+.login-container {
+    background: white;
+    padding: 3rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+}
+
+.login-container h1 {
+    color: var(--primary-color);
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.login-container h2 {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    font-weight: normal;
+    margin-bottom: 2rem;
+}
+
+.year-selector {
+    margin-bottom: 2rem;
+}
+
+.year-selector label {
+    margin-right: 0.5rem;
+}
+
+.year-selector select {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.user-selector p {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+
+.user-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.user-btn {
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    border: 2px solid var(--primary-color);
+    background: white;
+    color: var(--primary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.user-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+}
+
+/* ヘッダー */
+header {
+    background: var(--primary-color);
+    color: white;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    font-size: 1.5rem;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+#current-user {
+    font-weight: bold;
+}
+
+.btn-logout {
+    padding: 0.5rem 1rem;
+    background: white;
+    color: var(--primary-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background: var(--primary-light);
+    color: white;
+}
+
+/* タブナビゲーション */
+.tab-nav {
+    background: white;
+    padding: 0 1rem;
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+    overflow-x: auto;
+}
+
+.tab-btn {
+    padding: 1rem 1.5rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    color: var(--primary-color);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: bold;
+}
+
+/* メインコンテンツ */
+main {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* カード */
+.card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+.card h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* ダッシュボードグリッド */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.highlight-card {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+}
+
+.highlight-card h3 {
+    color: white;
+    border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+.award-display {
+    text-align: center;
+    padding: 1rem;
+}
+
+.big-number {
+    display: block;
+    font-size: 3rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.award-holder {
+    display: block;
+    font-size: 1.2rem;
+    margin-top: 0.5rem;
+    opacity: 0.9;
+}
+
+.info-display p,
+.my-stats p {
+    margin: 0.5rem 0;
+}
+
+/* 特別達成 */
+.special-achievements {
+    background: var(--card-bg);
+}
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.achievement-item h4 {
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+}
+
+.achievement-item ul {
+    list-style: none;
+}
+
+.achievement-item li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.achievement-item li:last-child {
+    border-bottom: none;
+}
+
+.no-data {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* ランキング */
+.ranking-controls {
+    margin-bottom: 1.5rem;
+}
+
+.radio-group {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.radio-label:hover {
+    border-color: var(--primary-color);
+}
+
+.radio-label:has(input:checked) {
+    border-color: var(--primary-color);
+    background: rgba(46, 125, 50, 0.1);
+}
+
+.radio-label input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.toggle-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.toggle-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.ranking-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ranking-table th,
+.ranking-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ranking-table th {
+    background: var(--background);
+    font-weight: bold;
+    color: var(--text-secondary);
+}
+
+.ranking-table tbody tr:hover {
+    background: var(--background);
+}
+
+.rank-1 {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.2) 0%, transparent 100%);
+}
+
+.rank-2 {
+    background: linear-gradient(90deg, rgba(192, 192, 192, 0.2) 0%, transparent 100%);
+}
+
+.rank-3 {
+    background: linear-gradient(90deg, rgba(205, 127, 50, 0.2) 0%, transparent 100%);
+}
+
+.rank-5, .rank-6 {
+    background: linear-gradient(90deg, rgba(211, 47, 47, 0.1) 0%, transparent 100%);
+}
+
+.award-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.award-gold {
+    background: var(--gold);
+    color: #333;
+}
+
+.award-silver {
+    background: var(--silver);
+    color: #333;
+}
+
+.award-bronze {
+    background: var(--bronze);
+    color: white;
+}
+
+.award-penalty {
+    background: var(--danger);
+    color: white;
+}
+
+.note {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+/* スコア一覧 */
+.scores-controls {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-group select {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.scores-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+.scores-table th,
+.scores-table td {
+    padding: 0.75rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.scores-table th {
+    background: var(--primary-color);
+    color: white;
+    font-weight: bold;
+}
+
+.scores-table tbody tr:nth-child(even) {
+    background: var(--background);
+}
+
+.scores-table tbody tr:hover {
+    background: rgba(46, 125, 50, 0.1);
+}
+
+.score-cell {
+    position: relative;
+}
+
+.score-value {
+    font-weight: bold;
+}
+
+.putt-value {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.not-participated {
+    color: var(--text-secondary);
+}
+
+/* スコア入力 */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.form-group input[type="date"],
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
+    padding: 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    width: 100%;
+    max-width: 300px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.score-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.score-input-item {
+    background: var(--background);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.score-input-item label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.score-input-item input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.special-input {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.special-input .form-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.special-input .form-group label {
+    margin-bottom: 0;
+    min-width: 100px;
+}
+
+.special-input select,
+.special-input input[type="number"] {
+    max-width: 150px;
+}
+
+.button-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-primary {
+    padding: 0.75rem 2rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+}
+
+.btn-secondary {
+    padding: 0.75rem 2rem;
+    background: white;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-danger {
+    padding: 0.75rem 2rem;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background: #b71c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+}
+
+.btn-edit {
+    padding: 0.4rem 0.8rem;
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+    background: #0d47a1;
+}
+
+.form-row {
+    margin-bottom: 1rem;
+}
+
+/* 各賞・ルール */
+.rules-list {
+    list-style: disc;
+    padding-left: 1.5rem;
+}
+
+.rules-list li {
+    margin: 0.5rem 0;
+}
+
+.awards-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.awards-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.awards-table td:first-child {
+    font-weight: bold;
+    width: 100px;
+}
+
+.awards-table tr.gold td:first-child {
+    color: var(--gold);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.awards-table tr.silver td:first-child {
+    color: #808080;
+}
+
+.awards-table tr.bronze td:first-child {
+    color: var(--bronze);
+}
+
+.awards-table tr.penalty {
+    background: rgba(211, 47, 47, 0.05);
+}
+
+.awards-table tr.penalty td:first-child {
+    color: var(--danger);
+}
+
+.special-awards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.special-award-item {
+    background: var(--background);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--secondary-color);
+}
+
+.special-award-item h4 {
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+}
+
+/* カップ名設定 */
+.cup-name-settings {
+    margin-bottom: 1rem;
+}
+
+.cup-name-settings .help-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.cup-name-input-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.cup-name-input-group label {
+    font-weight: bold;
+    min-width: 80px;
+}
+
+.cup-name-input-group input {
+    flex: 1;
+    min-width: 150px;
+    max-width: 300px;
+    padding: 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.cup-name-input-group input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.cup-name-input-group .btn-primary {
+    white-space: nowrap;
+}
+
+/* ハンディキャップ設定 */
+.handicap-settings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.handicap-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.handicap-item label {
+    min-width: 80px;
+    font-weight: bold;
+}
+
+.handicap-item input {
+    width: 80px;
+    padding: 0.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    text-align: center;
+}
+
+/* ヘルプセクション */
+.help-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.help-section h4 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.help-section p {
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+/* スコア入力（個人用） */
+.score-input-single {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.score-input-single input {
+    font-size: 1.2rem;
+    padding: 1rem;
+}
+
+.btn-large {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+}
+
+/* 最近のスコア表示 */
+.recent-scores-list {
+    list-style: none;
+}
+
+.recent-scores-list li {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.recent-scores-list li:last-child {
+    border-bottom: none;
+}
+
+.recent-score-date {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.recent-score-course {
+    flex-basis: 100%;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.recent-score-value {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* レスポンシブ - タブレット */
+@media (max-width: 1024px) {
+    .ranking-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .scores-table {
+        min-width: 700px;
+    }
+}
+
+/* レスポンシブ - スマホ */
+@media (max-width: 768px) {
+    .login-container {
+        padding: 1.5rem;
+        width: 95%;
+    }
+
+    .login-container h1 {
+        font-size: 2rem;
+    }
+
+    .user-buttons {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .user-btn {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+
+    header {
+        flex-direction: column;
+        gap: 0.75rem;
+        text-align: center;
+        padding: 0.75rem 1rem;
+    }
+
+    header h1 {
+        font-size: 1.2rem;
+    }
+
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    /* タブナビゲーション - スマホ用スクロール */
+    .tab-nav {
+        justify-content: flex-start;
+        padding: 0 0.5rem;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .tab-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab-btn {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    main {
+        padding: 0.75rem;
+    }
+
+    .card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+    }
+
+    .card h3 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* ダッシュボード */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .big-number {
+        font-size: 2.5rem;
+    }
+
+    .award-holder {
+        font-size: 1rem;
+    }
+
+    /* ランキング */
+    .ranking-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ranking-table th,
+    .ranking-table td {
+        padding: 0.5rem 0.3rem;
+        font-size: 0.85rem;
+    }
+
+    .radio-group {
+        gap: 1rem;
+    }
+
+    .radio-label {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    /* スコア一覧 */
+    .scores-controls {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-group select {
+        flex: 1;
+    }
+
+    .scores-table {
+        min-width: 600px;
+        font-size: 0.8rem;
+    }
+
+    .scores-table th,
+    .scores-table td {
+        padding: 0.5rem 0.25rem;
+    }
+
+    .btn-edit {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    /* フォーム */
+    .form-group input[type="date"],
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select {
+        max-width: 100%;
+        font-size: 16px; /* iOSズーム防止 */
+    }
+
+    .score-inputs {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .score-input-item {
+        padding: 0.75rem;
+    }
+
+    .score-input-item label {
+        font-size: 0.9rem;
+    }
+
+    .score-input-item input {
+        padding: 0.4rem;
+        font-size: 16px; /* iOSズーム防止 */
+    }
+
+    /* 個人スコア入力 */
+    .score-input-single {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .score-input-single input {
+        font-size: 16px; /* iOSズーム防止 */
+        padding: 0.75rem;
+    }
+
+    .btn-large {
+        width: 100%;
+        padding: 1rem;
+    }
+
+    /* ボタン */
+    .button-group {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+        width: 100%;
+        padding: 0.75rem 1rem;
+    }
+
+    /* 特別入力 */
+    .special-input {
+        grid-template-columns: 1fr;
+    }
+
+    .special-input .form-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .special-input select,
+    .special-input input[type="number"] {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    /* ハンディキャップ設定 */
+    .handicap-settings {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .handicap-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .handicap-item input {
+        width: 100%;
+    }
+
+    /* 各賞テーブル */
+    .awards-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .awards-table td:first-child {
+        width: 60px;
+    }
+
+    /* 特別賞 */
+    .special-awards {
+        grid-template-columns: 1fr;
+    }
+
+    /* ヘルプ */
+    .help-section {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .help-section h4 {
+        font-size: 0.95rem;
+    }
+
+    .help-section p {
+        font-size: 0.9rem;
+    }
+}
+
+/* 小さいスマホ用 */
+@media (max-width: 375px) {
+    .user-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .score-inputs {
+        grid-template-columns: 1fr;
+    }
+
+    .handicap-settings {
+        grid-template-columns: 1fr;
+    }
+
+    .tab-btn {
+        padding: 0.5rem 0.6rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.3s ease;
+}
+
+/* スクロールバー */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-light);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* S3同期通知 */
+.sync-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 90%;
+    text-align: center;
+    border: 2px solid var(--primary-color);
+}
+
+.sync-notification p {
+    margin: 0;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.sync-notification button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* 成功通知 */
+.sync-notification.success {
+    border-color: #4caf50;
+}
+
+.sync-notification.success p {
+    color: #4caf50;
+}
+
+/* エラー通知 */
+.sync-notification.error {
+    border-color: #f44336;
+}
+
+.sync-notification.error p {
+    color: #f44336;
+}
+
+@media (max-width: 768px) {
+    .sync-notification {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+}
+
+/* 更新ボタン */
+.btn-refresh {
+    padding: 0.5rem 1rem;
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.btn-refresh:hover {
+    background: #0d47a1;
+}
