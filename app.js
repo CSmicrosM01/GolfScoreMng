@@ -537,7 +537,8 @@ function updateLoginStats() {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].score);
         const scores = userRounds.map(r => {
             let score = r.scores[user].score;
-            score -= (appState.config.handicaps[user] || 0);
+            // ラウンドごとのハンディキャップを適用（なければ0）
+            score -= (r.scores[user].handicap || 0);
             return score;
         });
 
@@ -640,7 +641,6 @@ function setupEventListeners() {
     document.getElementById('save-score-btn').addEventListener('click', saveScore);
     document.getElementById('new-score-btn').addEventListener('click', resetInputForm);
     document.getElementById('save-my-score-btn').addEventListener('click', saveMyScore);
-    document.getElementById('save-handicap-btn').addEventListener('click', saveHandicaps);
     document.getElementById('save-cup-name-btn').addEventListener('click', saveCupName);
 
     document.getElementById('export-btn').addEventListener('click', exportData);
@@ -667,8 +667,6 @@ function switchTab(tabId) {
         setupInputForm();
     } else if (tabId === 'my-input') {
         setupMyInputForm();
-    } else if (tabId === 'awards') {
-        setupHandicapSettings();
     }
 }
 
@@ -681,7 +679,6 @@ function updateAllViews() {
     updateScoresTable();
     setupInputForm();
     setupMyInputForm();
-    setupHandicapSettings();
     setupCupNameSettings();
     updateFilters();
     updateCourseDatalist();
@@ -773,7 +770,8 @@ function updateDashboardRanking(rounds) {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].score);
         const scores = userRounds.map(r => {
             let score = r.scores[user].score;
-            score -= (appState.config.handicaps[user] || 0);
+            // ラウンドごとのハンディキャップを適用（なければ0）
+            score -= (r.scores[user].handicap || 0);
             return score;
         });
 
@@ -836,7 +834,8 @@ function updateOverallRanking(rounds, applyHandicap) {
         const scores = userRounds.map(r => {
             let score = r.scores[user].score;
             if (applyHandicap) {
-                score -= (appState.config.handicaps[user] || 0);
+                // ラウンドごとのハンディキャップを適用（なければ0）
+                score -= (r.scores[user].handicap || 0);
             }
             return score;
         });
@@ -884,7 +883,8 @@ function updateBestScoreRanking(rounds, applyHandicap) {
             if (round.scores[user] && round.scores[user].score) {
                 let score = round.scores[user].score;
                 if (applyHandicap) {
-                    score -= (appState.config.handicaps[user] || 0);
+                    // ラウンドごとのハンディキャップを適用（なければ0）
+                    score -= (round.scores[user].handicap || 0);
                 }
                 allScores.push({
                     user,
@@ -1023,10 +1023,12 @@ function updateScoresTable() {
                     if (scoreData && scoreData.score) {
                         const showUser = filterUser === 'all' || filterUser === user;
                         if (!showUser) return '<td class="not-participated">-</td>';
+                        const hcDisplay = scoreData.handicap ? `HC${scoreData.handicap}` : '';
                         return `
                             <td class="score-cell">
                                 <div class="score-value">${scoreData.score}</div>
                                 ${scoreData.putt ? `<div class="putt-value">(${scoreData.putt})</div>` : ''}
+                                ${hcDisplay ? `<div class="handicap-value">${hcDisplay}</div>` : ''}
                             </td>
                         `;
                     }
@@ -1063,7 +1065,8 @@ function setupInputForm() {
                 <div class="score-input-item">
                     <label>${user}</label>
                     <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric" value="${scoreData.score || ''}">
-                    <input type="number" id="putt-${user}" placeholder="パット数" min="10" max="80" inputmode="numeric" value="${scoreData.putt || ''}">
+                    <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric" value="${scoreData.putt || ''}">
+                    <input type="number" id="handicap-${user}" placeholder="HC" min="0" max="50" inputmode="numeric" value="${scoreData.handicap || ''}">
                 </div>
             `;
         }).join('');
@@ -1083,7 +1086,8 @@ function setupInputForm() {
             <div class="score-input-item">
                 <label>${user}</label>
                 <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric">
-                <input type="number" id="putt-${user}" placeholder="パット数" min="10" max="80" inputmode="numeric">
+                <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric">
+                <input type="number" id="handicap-${user}" placeholder="HC" min="0" max="50" inputmode="numeric">
             </div>
         `).join('');
 
@@ -1155,6 +1159,7 @@ async function saveMyScore() {
     const course = document.getElementById('my-input-course').value;
     const score = parseInt(document.getElementById('my-input-score').value);
     const putt = parseInt(document.getElementById('my-input-putt').value);
+    const handicap = parseInt(document.getElementById('my-input-handicap').value);
     const selectedYear = parseInt(document.getElementById('my-input-year').value);
 
     if (!date || !course) {
@@ -1183,6 +1188,7 @@ async function saveMyScore() {
     if (existingRound) {
         existingRound.scores[user] = { score };
         if (putt) existingRound.scores[user].putt = putt;
+        if (!isNaN(handicap)) existingRound.scores[user].handicap = handicap;
         alert('スコアを更新しました');
     } else {
         const roundNumber = yearData.rounds.length + 1;
@@ -1195,6 +1201,7 @@ async function saveMyScore() {
             }
         };
         if (putt) newRound.scores[user].putt = putt;
+        if (!isNaN(handicap)) newRound.scores[user].handicap = handicap;
         yearData.rounds.push(newRound);
         alert(`${selectedYear}年のスコアを保存しました`);
     }
@@ -1204,6 +1211,7 @@ async function saveMyScore() {
     document.getElementById('my-input-course').value = '';
     document.getElementById('my-input-score').value = '';
     document.getElementById('my-input-putt').value = '';
+    document.getElementById('my-input-handicap').value = '';
 
     updateAllViews();
 }
@@ -1276,10 +1284,12 @@ async function saveScore() {
     USERS.forEach(user => {
         const score = parseInt(document.getElementById(`score-${user}`).value);
         const putt = parseInt(document.getElementById(`putt-${user}`).value);
+        const handicap = parseInt(document.getElementById(`handicap-${user}`).value);
 
         if (score) {
             scores[user] = { score };
             if (putt) scores[user].putt = putt;
+            if (!isNaN(handicap)) scores[user].handicap = handicap;
             hasAnyScore = true;
         }
     });
@@ -1368,28 +1378,6 @@ async function saveScore() {
     document.getElementById('eagle-hole').value = '';
 
     updateAllViews();
-}
-
-// ===== ハンディキャップ =====
-function setupHandicapSettings() {
-    const container = document.getElementById('handicap-settings');
-    container.innerHTML = USERS.map(user => `
-        <div class="handicap-item">
-            <label>${user}</label>
-            <input type="number" id="handicap-${user}" value="${appState.config.handicaps[user] || 0}" min="0" max="50">
-        </div>
-    `).join('');
-}
-
-async function saveHandicaps() {
-    USERS.forEach(user => {
-        const value = parseInt(document.getElementById(`handicap-${user}`).value) || 0;
-        appState.config.handicaps[user] = value;
-    });
-
-    await saveConfig();
-    alert('ハンディキャップを保存しました');
-    updateRankings();
 }
 
 // ===== カップ名設定 =====

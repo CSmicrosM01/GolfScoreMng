@@ -286,6 +286,10 @@
                             <label for="my-input-putt">パット数:</label>
                             <input type="number" id="my-input-putt" placeholder="例: 36" min="10" max="80" inputmode="numeric">
                         </div>
+                        <div class="form-group">
+                            <label for="my-input-handicap">ハンディキャップ:</label>
+                            <input type="number" id="my-input-handicap" placeholder="例: 10" min="0" max="50" inputmode="numeric">
+                        </div>
                     </div>
 
                     <div class="button-group">
@@ -443,11 +447,9 @@
                 </div>
 
                 <div class="card">
-                    <h3>ハンディキャップ設定</h3>
-                    <div id="handicap-settings" class="handicap-settings">
-                        <!-- JSで動的に生成 -->
-                    </div>
-                    <button id="save-handicap-btn" class="btn-primary">ハンディキャップを保存</button>
+                    <h3>ハンディキャップについて</h3>
+                    <p>ハンディキャップはスコア入力時にラウンドごとに設定します。</p>
+                    <p>スコア入力画面または一括入力画面で、各プレイヤーのハンディキャップを入力してください。</p>
                 </div>
             </section>
 

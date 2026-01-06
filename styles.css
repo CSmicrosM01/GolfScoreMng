@@ -598,6 +598,12 @@ main {
     color: var(--text-secondary);
 }
 
+.handicap-value {
+    font-size: 0.7rem;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
 .not-participated {
     color: var(--text-secondary);
 }
