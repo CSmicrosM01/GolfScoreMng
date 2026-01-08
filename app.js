@@ -22,7 +22,8 @@ let appState = {
     yearData: {},           // 年度別データのキャッシュ { 2025: {...}, 2026: {...} }
     editingRound: null,     // 編集中のラウンドのインデックス
     editingYear: null,      // 編集中のラウンドの年度
-    lastSyncTime: null      // 最終同期時刻
+    lastSyncTime: null,     // 最終同期時刻
+    showNetScore: true      // true: ネット（HC適用）, false: グロス
 };
 
 // ===== ユーティリティ関数 =====
@@ -126,6 +127,7 @@ async function loadData() {
                     rounds: data.years[year].rounds || [],
                     holeInOnes: data.years[year].holeInOnes || [],
                     eagles: data.years[year].eagles || [],
+                    albatrosses: data.years[year].albatrosses || [],
                     cupName: data.cupNames?.[year] || '松本杯'
                 };
                 if (!appState.availableYears.includes(parseInt(year))) {
@@ -146,6 +148,7 @@ async function loadData() {
                 rounds: initialData.years[year].rounds || [],
                 holeInOnes: initialData.years[year].holeInOnes || [],
                 eagles: initialData.years[year].eagles || [],
+                albatrosses: initialData.years[year].albatrosses || [],
                 cupName: initialData.cupNames?.[year] || '松本杯'
             };
             if (!appState.availableYears.includes(parseInt(year))) {
@@ -177,6 +180,9 @@ function getDefaultConfig() {
             "近藤": 0,
             "比企": 0,
             "内藤": 0
+        },
+        courses: {
+            "default": { "rating": 72.0, "slope": 113, "par": 72 }
         }
     };
 }
@@ -188,7 +194,67 @@ function getEmptyYearData(year) {
         rounds: [],
         holeInOnes: [],
         eagles: [],
+        albatrosses: [],
         cupName: '松本杯'
+    };
+}
+
+// ===== WHS ハンディキャップ計算 =====
+// 差分スコアを計算
+function calculateDifferential(score, courseName) {
+    const courseData = appState.config.courses?.[courseName] || appState.config.courses?.["default"] || { rating: 72.0, slope: 113 };
+    const differential = (score - courseData.rating) * (113 / courseData.slope);
+    return differential;
+}
+
+// ユーザーのハンディキャップインデックスを計算
+function calculateHandicapIndex(user) {
+    // 全年度から全ラウンドを取得
+    const allRounds = [];
+    Object.values(appState.yearData).forEach(yearData => {
+        if (yearData.rounds) {
+            yearData.rounds.forEach(round => {
+                if (round.scores[user] && round.scores[user].score) {
+                    allRounds.push({
+                        date: round.date,
+                        course: round.course,
+                        score: round.scores[user].score,
+                        differential: calculateDifferential(round.scores[user].score, round.course)
+                    });
+                }
+            });
+        }
+    });
+
+    // 日付順にソート（新しい順）
+    allRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // 20回未満の場合は全ラウンド、20回以上の場合は直近20ラウンド
+    const targetRounds = allRounds.length < 20 ? allRounds : allRounds.slice(0, 20);
+
+    if (targetRounds.length < 3) {
+        return { index: 0, best8: [], totalRounds: targetRounds.length };
+    }
+
+    // ベスト採用数を決定
+    // 20回未満: 全ラウンドからベスト8（ただし全ラウンド数が8未満の場合は全て）
+    // 20回以上: 直近20からベスト8
+    const numBest = Math.min(8, targetRounds.length);
+
+    // 差分スコアでソート
+    const sortedByDifferential = [...targetRounds].sort((a, b) => a.differential - b.differential);
+    const best = sortedByDifferential.slice(0, numBest);
+
+    // ベスト平均を計算
+    const avgDifferential = best.reduce((sum, r) => sum + r.differential, 0) / best.length;
+
+    // ハンディキャップインデックス = 平均差分 × 0.96
+    const handicapIndex = Math.round(avgDifferential * 0.96 * 10) / 10;
+
+    return {
+        index: Math.max(0, handicapIndex), // 負の値を防ぐ
+        best8: best,
+        totalRounds: targetRounds.length
     };
 }
 
@@ -317,7 +383,8 @@ function saveToLocalStorage() {
         data.years[year] = {
             rounds: yearData.rounds,
             holeInOnes: yearData.holeInOnes,
-            eagles: yearData.eagles
+            eagles: yearData.eagles,
+            albatrosses: yearData.albatrosses || []
         };
         data.cupNames[year] = yearData.cupName;
     });
@@ -535,10 +602,11 @@ function updateLoginStats() {
     // 総合ランキング（ハンディ適用）
     const rankings = USERS.map(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].score);
+        const handicapIndex = calculateHandicapIndex(user).index;
         const scores = userRounds.map(r => {
             let score = r.scores[user].score;
-            // ラウンドごとのハンディキャップを適用（なければ0）
-            score -= (r.scores[user].handicap || 0);
+            // 自動計算されたハンディキャップインデックスを適用
+            score -= handicapIndex;
             return score;
         });
 
@@ -629,19 +697,15 @@ function setupEventListeners() {
         });
     });
 
-    document.querySelectorAll('input[name="handicap-mode"]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            updateRankings();
-        });
-    });
-
     document.getElementById('filter-user').addEventListener('change', updateScoresTable);
     document.getElementById('filter-course').addEventListener('change', updateScoresTable);
 
     document.getElementById('save-score-btn').addEventListener('click', saveScore);
     document.getElementById('new-score-btn').addEventListener('click', resetInputForm);
+    document.getElementById('delete-score-btn').addEventListener('click', deleteRound);
     document.getElementById('save-my-score-btn').addEventListener('click', saveMyScore);
     document.getElementById('save-cup-name-btn').addEventListener('click', saveCupName);
+    document.getElementById('update-handicap-btn').addEventListener('click', updateAndSaveHandicaps);
 
     document.getElementById('export-btn').addEventListener('click', exportData);
     document.getElementById('import-btn').addEventListener('click', () => {
@@ -667,6 +731,8 @@ function switchTab(tabId) {
         setupInputForm();
     } else if (tabId === 'my-input') {
         setupMyInputForm();
+    } else if (tabId === 'handicap') {
+        updateHandicapView();
     }
 }
 
@@ -758,6 +824,17 @@ function updateSpecialAchievements(yearData) {
     } else {
         eagleList.innerHTML = '<li class="no-data">達成者なし</li>';
     }
+
+    const albatrossList = document.getElementById('albatross-list');
+    if (albatrossList) {
+        if (yearData.albatrosses && yearData.albatrosses.length > 0) {
+            albatrossList.innerHTML = yearData.albatrosses.map(a =>
+                `<li>${withSan(a.user)} - ${a.date} (${a.course} ${a.hole}番ホール)</li>`
+            ).join('');
+        } else {
+            albatrossList.innerHTML = '<li class="no-data">達成者なし</li>';
+        }
+    }
 }
 
 function updateDashboardRanking(rounds) {
@@ -768,10 +845,11 @@ function updateDashboardRanking(rounds) {
 
     const rankings = USERS.map(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].score);
+        const handicapIndex = calculateHandicapIndex(user).index;
         const scores = userRounds.map(r => {
             let score = r.scores[user].score;
-            // ラウンドごとのハンディキャップを適用（なければ0）
-            score -= (r.scores[user].handicap || 0);
+            // 自動計算されたハンディキャップインデックスを適用
+            score -= handicapIndex;
             return score;
         });
 
@@ -818,25 +896,28 @@ function updateRankings() {
     const yearData = getCurrentYearData();
     if (!yearData || !yearData.rounds) return;
 
-    const applyHandicap = document.querySelector('input[name="handicap-mode"]:checked').value === 'with';
-
-    updateOverallRanking(yearData.rounds, applyHandicap);
-    updateBestScoreRanking(yearData.rounds, applyHandicap);
+    // ネット（HC適用）とグロス（HCなし）の両方を表示
+    updateOverallRanking(yearData.rounds, true, 'overall-ranking-net');  // ネット
+    updateOverallRanking(yearData.rounds, false, 'overall-ranking-gross'); // グロス
+    updateBestScoreRanking(yearData.rounds, true);  // ベストスコアはネットで表示
     updatePuttRanking(yearData.rounds);
+    updateParOnRanking(yearData.rounds);
+    updateScoreChangeRanking();
 }
 
-function updateOverallRanking(rounds, applyHandicap) {
-    const tbody = document.querySelector('#overall-ranking tbody');
+function updateOverallRanking(rounds, applyHandicap, tableId) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    if (!tbody) return;
+
     const validRounds = rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
 
     const rankings = USERS.map(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].score);
+        const handicapIndex = applyHandicap ? calculateHandicapIndex(user).index : 0;
         const scores = userRounds.map(r => {
             let score = r.scores[user].score;
-            if (applyHandicap) {
-                // ラウンドごとのハンディキャップを適用（なければ0）
-                score -= (r.scores[user].handicap || 0);
-            }
+            // 自動計算されたハンディキャップインデックスを適用
+            score -= handicapIndex;
             return score;
         });
 
@@ -859,18 +940,33 @@ function updateOverallRanking(rounds, applyHandicap) {
         prevAverage = r.average;
     });
 
-    tbody.innerHTML = rankings.map((r) => {
-        const award = getAwardBadge(r.rank);
-        return `
-            <tr class="rank-${r.rank}">
-                <td>${r.rank}</td>
-                <td>${r.user}</td>
-                <td>${r.average.toFixed(1)}</td>
-                <td>${r.rounds}回</td>
-                <td>${award}</td>
-            </tr>
-        `;
-    }).join('');
+    // ネット（HC適用）の場合のみ賞を表示
+    if (applyHandicap) {
+        tbody.innerHTML = rankings.map((r) => {
+            const award = getAwardBadge(r.rank);
+            return `
+                <tr class="rank-${r.rank}">
+                    <td>${r.rank}</td>
+                    <td>${r.user}</td>
+                    <td>${r.average.toFixed(1)}</td>
+                    <td>${r.rounds}回</td>
+                    <td>${award}</td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        // グロス（HCなし）の場合は賞列なし
+        tbody.innerHTML = rankings.map((r) => {
+            return `
+                <tr class="rank-${r.rank}">
+                    <td>${r.rank}</td>
+                    <td>${r.user}</td>
+                    <td>${r.average.toFixed(1)}</td>
+                    <td>${r.rounds}回</td>
+                </tr>
+            `;
+        }).join('');
+    }
 }
 
 function updateBestScoreRanking(rounds, applyHandicap) {
@@ -881,11 +977,10 @@ function updateBestScoreRanking(rounds, applyHandicap) {
     validRounds.forEach(round => {
         USERS.forEach(user => {
             if (round.scores[user] && round.scores[user].score) {
+                const handicapIndex = applyHandicap ? calculateHandicapIndex(user).index : 0;
                 let score = round.scores[user].score;
-                if (applyHandicap) {
-                    // ラウンドごとのハンディキャップを適用（なければ0）
-                    score -= (round.scores[user].handicap || 0);
-                }
+                // 自動計算されたハンディキャップインデックスを適用
+                score -= handicapIndex;
                 allScores.push({
                     user,
                     score,
@@ -958,6 +1053,124 @@ function updatePuttRanking(rounds) {
     `).join('');
 }
 
+function updateParOnRanking(rounds) {
+    const tbody = document.querySelector('#paron-ranking tbody');
+    if (!tbody) return;
+
+    const validRounds = rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
+
+    const rankings = USERS.map(user => {
+        const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].parOn !== undefined);
+        const parOns = userRounds.map(r => r.scores[user].parOn);
+
+        const totalParOns = parOns.reduce((a, b) => a + b, 0);
+        const totalHoles = userRounds.length * 18;
+        const parOnRate = parOns.length >= MIN_ROUNDS ? (totalParOns / totalHoles) * 100 : null;
+
+        return {
+            user,
+            rounds: userRounds.length,
+            parOnRate,
+            isValid: parOns.length >= MIN_ROUNDS
+        };
+    }).filter(r => r.isValid)
+      .sort((a, b) => b.parOnRate - a.parOnRate); // 降順（高い方が上位）
+
+    let currentRank = 1;
+    let prevRate = null;
+    rankings.forEach((r, i) => {
+        if (prevRate !== null && r.parOnRate.toFixed(1) !== prevRate.toFixed(1)) {
+            currentRank = i + 1;
+        }
+        r.rank = currentRank;
+        prevRate = r.parOnRate;
+    });
+
+    if (rankings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">データが不足しています</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = rankings.map((r) => `
+        <tr class="${r.rank === 1 ? 'rank-1' : ''}">
+            <td>${r.rank}</td>
+            <td>${r.user}</td>
+            <td>${r.parOnRate.toFixed(1)}%</td>
+            <td>${r.rounds}回</td>
+        </tr>
+    `).join('');
+}
+
+function updateScoreChangeRanking() {
+    const tbody = document.querySelector('#score-change-ranking tbody');
+    if (!tbody) return;
+
+    const currentYear = appState.currentYear;
+    const lastYear = currentYear - 1;
+
+    const currentYearData = appState.yearData[currentYear];
+    const lastYearData = appState.yearData[lastYear];
+
+    if (!currentYearData || !lastYearData) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">昨年度のデータがありません</td></tr>';
+        return;
+    }
+
+    const currentValidRounds = currentYearData.rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
+    const lastValidRounds = lastYearData.rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
+
+    const rankings = USERS.map(user => {
+        const currentUserRounds = currentValidRounds.filter(r => r.scores[user] && r.scores[user].score);
+        const lastUserRounds = lastValidRounds.filter(r => r.scores[user] && r.scores[user].score);
+
+        const currentScores = currentUserRounds.map(r => r.scores[user].score);
+        const lastScores = lastUserRounds.map(r => r.scores[user].score);
+
+        const currentAvg = currentScores.length >= MIN_ROUNDS ? currentScores.reduce((a, b) => a + b, 0) / currentScores.length : null;
+        const lastAvg = lastScores.length >= MIN_ROUNDS ? lastScores.reduce((a, b) => a + b, 0) / lastScores.length : null;
+
+        const change = (currentAvg !== null && lastAvg !== null) ? currentAvg - lastAvg : null;
+
+        return {
+            user,
+            lastAvg,
+            currentAvg,
+            change,
+            isValid: change !== null
+        };
+    }).filter(r => r.isValid)
+      .sort((a, b) => a.change - b.change); // 昇順（マイナスが大きい方が上達）
+
+    let currentRank = 1;
+    let prevChange = null;
+    rankings.forEach((r, i) => {
+        if (prevChange !== null && r.change.toFixed(1) !== prevChange.toFixed(1)) {
+            currentRank = i + 1;
+        }
+        r.rank = currentRank;
+        prevChange = r.change;
+    });
+
+    if (rankings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">データが不足しています</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = rankings.map((r) => {
+        const changeClass = r.change < 0 ? 'score-improved' : r.change > 0 ? 'score-worse' : '';
+        const changeSign = r.change > 0 ? '+' : '';
+        return `
+            <tr class="${r.rank === 1 ? 'rank-1' : ''}">
+                <td>${r.rank}</td>
+                <td>${r.user}</td>
+                <td>${r.lastAvg.toFixed(1)}</td>
+                <td>${r.currentAvg.toFixed(1)}</td>
+                <td class="${changeClass}">${changeSign}${r.change.toFixed(1)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
 function getAwardBadge(rank) {
     switch (rank) {
         case 1: return '<span class="award-badge award-gold">優勝</span>';
@@ -986,10 +1199,14 @@ function updateFilters() {
 
     const hioSelect = document.getElementById('hole-in-one-input');
     const eagleSelect = document.getElementById('eagle-input');
+    const albatrossSelect = document.getElementById('albatross-input');
     const userOptions = '<option value="">なし</option>' +
         USERS.map(u => `<option value="${u}">${u}</option>`).join('');
     hioSelect.innerHTML = userOptions;
     eagleSelect.innerHTML = userOptions;
+    if (albatrossSelect) {
+        albatrossSelect.innerHTML = userOptions;
+    }
 }
 
 function updateScoresTable() {
@@ -1023,12 +1240,10 @@ function updateScoresTable() {
                     if (scoreData && scoreData.score) {
                         const showUser = filterUser === 'all' || filterUser === user;
                         if (!showUser) return '<td class="not-participated">-</td>';
-                        const hcDisplay = scoreData.handicap ? `HC${scoreData.handicap}` : '';
                         return `
                             <td class="score-cell">
                                 <div class="score-value">${scoreData.score}</div>
                                 ${scoreData.putt ? `<div class="putt-value">(${scoreData.putt})</div>` : ''}
-                                ${hcDisplay ? `<div class="handicap-value">${hcDisplay}</div>` : ''}
                             </td>
                         `;
                     }
@@ -1066,7 +1281,7 @@ function setupInputForm() {
                     <label>${user}</label>
                     <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric" value="${scoreData.score || ''}">
                     <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric" value="${scoreData.putt || ''}">
-                    <input type="number" id="handicap-${user}" placeholder="HC" min="0" max="50" inputmode="numeric" value="${scoreData.handicap || ''}">
+                    <input type="number" id="paron-${user}" placeholder="パーオン" min="0" max="18" inputmode="numeric" value="${scoreData.parOn || ''}">
                 </div>
             `;
         }).join('');
@@ -1087,7 +1302,7 @@ function setupInputForm() {
                 <label>${user}</label>
                 <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric">
                 <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric">
-                <input type="number" id="handicap-${user}" placeholder="HC" min="0" max="50" inputmode="numeric">
+                <input type="number" id="paron-${user}" placeholder="パーオン" min="0" max="18" inputmode="numeric">
             </div>
         `).join('');
 
@@ -1159,7 +1374,7 @@ async function saveMyScore() {
     const course = document.getElementById('my-input-course').value;
     const score = parseInt(document.getElementById('my-input-score').value);
     const putt = parseInt(document.getElementById('my-input-putt').value);
-    const handicap = parseInt(document.getElementById('my-input-handicap').value);
+    const parOn = parseInt(document.getElementById('my-input-paron').value);
     const selectedYear = parseInt(document.getElementById('my-input-year').value);
 
     if (!date || !course) {
@@ -1188,7 +1403,7 @@ async function saveMyScore() {
     if (existingRound) {
         existingRound.scores[user] = { score };
         if (putt) existingRound.scores[user].putt = putt;
-        if (!isNaN(handicap)) existingRound.scores[user].handicap = handicap;
+        if (parOn) existingRound.scores[user].parOn = parOn;
         alert('スコアを更新しました');
     } else {
         const roundNumber = yearData.rounds.length + 1;
@@ -1201,7 +1416,7 @@ async function saveMyScore() {
             }
         };
         if (putt) newRound.scores[user].putt = putt;
-        if (!isNaN(handicap)) newRound.scores[user].handicap = handicap;
+        if (parOn) newRound.scores[user].parOn = parOn;
         yearData.rounds.push(newRound);
         alert(`${selectedYear}年のスコアを保存しました`);
     }
@@ -1211,7 +1426,7 @@ async function saveMyScore() {
     document.getElementById('my-input-course').value = '';
     document.getElementById('my-input-score').value = '';
     document.getElementById('my-input-putt').value = '';
-    document.getElementById('my-input-handicap').value = '';
+    document.getElementById('my-input-paron').value = '';
 
     updateAllViews();
 }
@@ -1284,12 +1499,12 @@ async function saveScore() {
     USERS.forEach(user => {
         const score = parseInt(document.getElementById(`score-${user}`).value);
         const putt = parseInt(document.getElementById(`putt-${user}`).value);
-        const handicap = parseInt(document.getElementById(`handicap-${user}`).value);
+        const parOn = parseInt(document.getElementById(`paron-${user}`)?.value);
 
         if (score) {
             scores[user] = { score };
             if (putt) scores[user].putt = putt;
-            if (!isNaN(handicap)) scores[user].handicap = handicap;
+            if (parOn) scores[user].parOn = parOn;
             hasAnyScore = true;
         }
     });
@@ -1359,6 +1574,17 @@ async function saveScore() {
             });
         }
 
+        const albatrossUser = document.getElementById('albatross-input')?.value;
+        const albatrossHole = document.getElementById('albatross-hole')?.value;
+        if (albatrossUser && albatrossHole) {
+            yearData.albatrosses.push({
+                user: albatrossUser,
+                date,
+                course,
+                hole: parseInt(albatrossHole)
+            });
+        }
+
         alert(`${year}年のスコアを保存しました`);
     }
 
@@ -1376,8 +1602,100 @@ async function saveScore() {
     document.getElementById('hole-in-one-hole').value = '';
     document.getElementById('eagle-input').value = '';
     document.getElementById('eagle-hole').value = '';
+    const albatrossInput = document.getElementById('albatross-input');
+    const albatrossHole = document.getElementById('albatross-hole');
+    if (albatrossInput) albatrossInput.value = '';
+    if (albatrossHole) albatrossHole.value = '';
 
     updateAllViews();
+}
+
+// ===== ハンディキャップ確認画面 =====
+function updateHandicapView() {
+    const container = document.getElementById('handicap-list');
+
+    const handicaps = USERS.map(user => {
+        const hcData = calculateHandicapIndex(user);
+        return {
+            user,
+            index: hcData.index,
+            rounds: hcData.totalRounds,
+            best8: hcData.best8
+        };
+    }).sort((a, b) => a.index - b.index);
+
+    container.innerHTML = handicaps.map(hc => `
+        <div class="handicap-item" onclick="showHandicapDetail('${hc.user}')">
+            <div class="handicap-user">${hc.user}</div>
+            <div class="handicap-index">${hc.index.toFixed(1)}</div>
+            <div class="handicap-rounds">${hc.rounds}ラウンド</div>
+        </div>
+    `).join('');
+}
+
+function showHandicapDetail(user) {
+    const hcData = calculateHandicapIndex(user);
+    const detailTitle = document.getElementById('handicap-detail-title');
+    const detailContainer = document.getElementById('handicap-detail');
+
+    detailTitle.textContent = `${user}さんのハンディキャップ詳細`;
+
+    // デバッグ用ログ
+    console.log(`${user}のハンディキャップデータ:`, {
+        totalRounds: hcData.totalRounds,
+        best8Length: hcData.best8.length,
+        best8: hcData.best8
+    });
+
+    if (hcData.best8.length === 0) {
+        detailContainer.innerHTML = '<p class="no-data">データが不足しています（3ラウンド以上必要）</p>';
+        return;
+    }
+
+    const avgDiff = hcData.best8.reduce((sum, r) => sum + r.differential, 0) / hcData.best8.length;
+
+    detailContainer.innerHTML = `
+        <div class="handicap-summary">
+            <div class="summary-item">
+                <span class="summary-label">ハンディキャップインデックス</span>
+                <span class="summary-value">${hcData.index.toFixed(1)}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">対象ラウンド数</span>
+                <span class="summary-value">${hcData.totalRounds}ラウンド</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">ベスト採用数</span>
+                <span class="summary-value">${hcData.best8.length}ラウンド</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">平均差分スコア</span>
+                <span class="summary-value">${avgDiff.toFixed(1)}</span>
+            </div>
+        </div>
+
+        <h4>ベストスコア一覧</h4>
+        <table class="best-scores-table">
+            <thead>
+                <tr>
+                    <th>日付</th>
+                    <th>コース</th>
+                    <th>スコア</th>
+                    <th>差分</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${hcData.best8.map(round => `
+                    <tr>
+                        <td>${formatDate(round.date)}</td>
+                        <td>${round.course}</td>
+                        <td>${round.score}</td>
+                        <td>${round.differential.toFixed(1)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
 }
 
 // ===== カップ名設定 =====
@@ -1423,11 +1741,54 @@ async function saveCupName() {
 
     const year = appState.currentYear;
     const yearData = getCurrentYearData();
+
+    // カップ名を更新
     yearData.cupName = cupName;
 
-    await saveYearData(year);
-    updateCupName();
-    alert('カップ名を保存しました');
+    // 年度プロパティが存在することを確認（Lambda送信用）
+    if (!yearData.year) {
+        yearData.year = parseInt(year);
+    }
+
+    // appStateに反映
+    appState.yearData[year] = yearData;
+
+    try {
+        await saveYearData(year);
+        updateCupName();
+        alert('カップ名を保存しました');
+    } catch (error) {
+        console.error('カップ名保存エラー:', error);
+        alert('カップ名の保存に失敗しました');
+    }
+}
+
+// ===== ハンディキャップ更新 =====
+async function updateAndSaveHandicaps() {
+    const confirmMsg = 'ハンディキャップを更新しますか？\n\n直近20ラウンドのベスト8から計算された値がconfig.jsonに保存されます。\n※この操作は1月と6月に実施してください。';
+
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    // 全ユーザーのハンディキャップを計算
+    USERS.forEach(user => {
+        const hcData = calculateHandicapIndex(user);
+        appState.config.handicaps[user] = hcData.index;
+    });
+
+    // ハンディキャップ更新日時を記録
+    const now = new Date();
+    appState.config.handicapUpdatedAt = now.toISOString();
+
+    try {
+        await saveConfig();
+        updateHandicapView();
+        alert(`ハンディキャップを更新しました\n更新日時: ${now.toLocaleString('ja-JP')}`);
+    } catch (error) {
+        console.error('ハンディキャップ保存エラー:', error);
+        alert('ハンディキャップの保存に失敗しました');
+    }
 }
 
 // ===== データエクスポート/インポート =====

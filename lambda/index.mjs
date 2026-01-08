@@ -193,6 +193,7 @@ async function getYearData(year) {
                 rounds: [],
                 holeInOnes: [],
                 eagles: [],
+                albatrosses: [],
                 cupName: "松本杯"
             };
         }

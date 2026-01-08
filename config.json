@@ -7,5 +7,23 @@
     "近藤": 0,
     "比企": 0,
     "内藤": 0
+  },
+  "courses": {
+    "サカワ": { "rating": 72.0, "slope": 113, "par": 72 },
+    "千葉新日本": { "rating": 72.0, "slope": 113, "par": 72 },
+    "箱根くらかけ": { "rating": 72.0, "slope": 113, "par": 72 },
+    "三島CC": { "rating": 72.0, "slope": 113, "par": 72 },
+    "ベルセルバCC": { "rating": 72.0, "slope": 113, "par": 72 },
+    "東京湾CC": { "rating": 72.0, "slope": 113, "par": 72 },
+    "ベルグリーン": { "rating": 72.0, "slope": 113, "par": 72 },
+    "東名富士": { "rating": 72.0, "slope": 113, "par": 72 },
+    "木更津東": { "rating": 72.0, "slope": 113, "par": 72 },
+    "秦野": { "rating": 72.0, "slope": 113, "par": 72 },
+    "ベルビュー": { "rating": 72.0, "slope": 113, "par": 72 },
+    "市原柿の木台": { "rating": 72.0, "slope": 113, "par": 72 },
+    "丸の内": { "rating": 72.0, "slope": 113, "par": 72 },
+    "真名CCゲ-リ-": { "rating": 72.0, "slope": 113, "par": 72 },
+    "小田原G松田": { "rating": 72.0, "slope": 113, "par": 72 },
+    "default": { "rating": 72.0, "slope": 113, "par": 72 }
   }
 }

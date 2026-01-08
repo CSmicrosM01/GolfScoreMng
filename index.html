@@ -71,6 +71,7 @@
             <button class="tab-btn" data-tab="scores">スコア一覧</button>
             <button class="tab-btn" data-tab="my-input">スコア入力</button>
             <button class="tab-btn" data-tab="bulk-input">一括入力</button>
+            <button class="tab-btn" data-tab="handicap">ハンディキャップ</button>
             <button class="tab-btn" data-tab="awards">各賞・ルール</button>
             <button class="tab-btn" data-tab="help">操作方法</button>
         </nav>
@@ -138,6 +139,12 @@
                             </ul>
                         </div>
                         <div class="achievement-item">
+                            <h4>アルバトロス達成者</h4>
+                            <ul id="albatross-list">
+                                <li class="no-data">達成者なし</li>
+                            </ul>
+                        </div>
+                        <div class="achievement-item">
                             <h4>イーグル達成者</h4>
                             <ul id="eagle-list">
                                 <li class="no-data">達成者なし</li>
@@ -149,24 +156,11 @@
 
             <!-- ランキング -->
             <section id="ranking" class="tab-content">
-                <div class="ranking-controls">
-                    <div class="radio-group">
-                        <label class="radio-label">
-                            <input type="radio" name="handicap-mode" value="with" checked>
-                            ハンディ適用
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="handicap-mode" value="without">
-                            ハンディなし
-                        </label>
-                    </div>
-                </div>
-
                 <div class="ranking-grid">
                     <div class="card">
-                        <h3>総合順位（平均スコア）</h3>
+                        <h3>総合順位（ネット - HC適用）</h3>
                         <p class="note">※3回以上参加者のみ</p>
-                        <table class="ranking-table" id="overall-ranking">
+                        <table class="ranking-table" id="overall-ranking-net">
                             <thead>
                                 <tr>
                                     <th>順位</th>
@@ -174,6 +168,22 @@
                                     <th>平均</th>
                                     <th>回数</th>
                                     <th>賞</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>総合順位（グロス - HCなし）</h3>
+                        <p class="note">※3回以上参加者のみ</p>
+                        <table class="ranking-table" id="overall-ranking-gross">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>平均</th>
+                                    <th>回数</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -206,6 +216,39 @@
                                     <th>名前</th>
                                     <th>平均</th>
                                     <th>回数</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>パーオン率ランキング⭐️</h3>
+                        <p class="note">※3回以上参加者のみ</p>
+                        <table class="ranking-table" id="paron-ranking">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>パーオン率(%)</th>
+                                    <th>回数</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>平均スコア変化ランキング⭐️</h3>
+                        <p class="note">※昨年・今年とも3回以上参加者のみ（マイナスが上達）</p>
+                        <table class="ranking-table" id="score-change-ranking">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>昨年平均</th>
+                                    <th>今年平均</th>
+                                    <th>変化</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -287,8 +330,8 @@
                             <input type="number" id="my-input-putt" placeholder="例: 36" min="10" max="80" inputmode="numeric">
                         </div>
                         <div class="form-group">
-                            <label for="my-input-handicap">ハンディキャップ:</label>
-                            <input type="number" id="my-input-handicap" placeholder="例: 10" min="0" max="50" inputmode="numeric">
+                            <label for="my-input-paron">パーオン:</label>
+                            <input type="number" id="my-input-paron" placeholder="例: 12" min="0" max="18" inputmode="numeric">
                         </div>
                     </div>
 
@@ -344,6 +387,13 @@
                             <input type="number" id="hole-in-one-hole" placeholder="ホール番号" min="1" max="18" inputmode="numeric">
                         </div>
                         <div class="form-group">
+                            <label for="albatross-input">アルバトロス:</label>
+                            <select id="albatross-input">
+                                <option value="">なし</option>
+                            </select>
+                            <input type="number" id="albatross-hole" placeholder="ホール番号" min="1" max="18" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
                             <label for="eagle-input">イーグル:</label>
                             <select id="eagle-input">
                                 <option value="">なし</option>
@@ -364,6 +414,28 @@
                         <button id="export-btn" class="btn-secondary">エクスポート</button>
                         <button id="import-btn" class="btn-secondary">インポート</button>
                         <input type="file" id="import-file" accept=".json" style="display: none;">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ハンディキャップ -->
+            <section id="handicap" class="tab-content">
+                <div class="card">
+                    <h3>ハンディキャップ一覧</h3>
+                    <p class="help-text">直近20ラウンドのベスト8を基にWHS（ワールドハンディキャップシステム）で計算されます。</p>
+                    <p class="help-text"><strong>※2026年度〜：</strong>1月と6月に更新ボタンを押して、ハンディキャップを確定させてください。</p>
+                    <div class="button-group">
+                        <button id="update-handicap-btn" class="btn-primary">ハンディキャップを更新</button>
+                    </div>
+                    <div id="handicap-list" class="handicap-list">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 id="handicap-detail-title">ハンディキャップ詳細</h3>
+                    <div id="handicap-detail" class="handicap-detail">
+                        <p class="no-data">ユーザーを選択してください</p>
                     </div>
                 </div>
             </section>
@@ -391,32 +463,45 @@
                 </div>
 
                 <div class="card">
-                    <h3>各賞</h3>
+                    <h3>カップ名の名前権利（2026年度〜）</h3>
+                    <p class="help-text">以下の優先順位で来年度のカップ名が決まります：</p>
+                    <ol class="rules-list">
+                        <li><strong>ベスト更新（80未満）</strong></li>
+                        <li><strong>アルバトロス達成者</strong></li>
+                        <li><strong>ホールインワン達成者</strong></li>
+                        <li><strong>イーグル達成者</strong></li>
+                        <li><strong>グロス1位</strong></li>
+                    </ol>
+                    <p class="note">※カップの帯に名前を書くのはグロスの1位</p>
+                </div>
+
+                <div class="card">
+                    <h3>各賞（HC込みアベレージ順位）</h3>
                     <table class="awards-table">
                         <tbody>
                             <tr class="gold">
-                                <td>優勝</td>
-                                <td>翌年の○○杯に名前が付く、トロフィー授与</td>
+                                <td>1位</td>
+                                <td>6位からラウンドの昼食代をプレゼントしてもらう ※</td>
                             </tr>
                             <tr class="silver">
-                                <td>準優勝</td>
-                                <td>6位からラウンドの昼食代を奢ってもらう ※</td>
+                                <td>2位</td>
+                                <td>5位からラウンドの昼食代をプレゼントしてもらう ※</td>
                             </tr>
-                            <tr class="bronze">
+                            <tr>
                                 <td>3位</td>
-                                <td>5位からラウンドの昼食代を奢ってもらう ※</td>
+                                <td>なし</td>
                             </tr>
                             <tr>
                                 <td>4位</td>
-                                <td>何もなし</td>
+                                <td>なし</td>
                             </tr>
                             <tr class="penalty">
                                 <td>5位</td>
-                                <td>3位のラウンドの昼食代を奢る ※</td>
+                                <td>2位にラウンドの昼食代をプレゼント ※</td>
                             </tr>
                             <tr class="penalty">
                                 <td>6位</td>
-                                <td>準優勝のラウンドの昼食代を奢る ※</td>
+                                <td>1位にラウンドの昼食代をプレゼント ※</td>
                             </tr>
                         </tbody>
                     </table>
@@ -424,17 +509,18 @@
                 </div>
 
                 <div class="card">
-                    <h3>特別賞</h3>
+                    <h3>特別賞（2026年度〜）</h3>
                     <div class="special-awards">
                         <div class="special-award-item">
-                            <h4>ベストスコア賞</h4>
-                            <p>参加者全員から1,000円集めて6,000円ぐらいのゴルフボールをプレゼント（受賞者が好きなゴルフボールを選べる）</p>
+                            <h4>⭐️ パーオン率ランキング1位</h4>
+                            <p>今年のラウンドのパーオン率が最も高い人に贈られる賞</p>
                         </div>
                         <div class="special-award-item">
-                            <h4>平均パット数ランキング1位</h4>
-                            <p>参加者全員から1,000円集めて6,000円ぐらいのゴルフボールをプレゼント（受賞者が好きなゴルフボールを選べる）</p>
+                            <h4>⭐️ 平均誤差賞</h4>
+                            <p>昨年度と今年度の平均を比較し、スコアが一番上がった人（最も上達した人）に贈られる賞</p>
                         </div>
                     </div>
+                    <p class="note">※2025年度までのベストスコア賞・平均パット数ランキング1位は廃止されました</p>
                 </div>
 
                 <div class="card">
@@ -447,9 +533,11 @@
                 </div>
 
                 <div class="card">
-                    <h3>ハンディキャップについて</h3>
-                    <p>ハンディキャップはスコア入力時にラウンドごとに設定します。</p>
-                    <p>スコア入力画面または一括入力画面で、各プレイヤーのハンディキャップを入力してください。</p>
+                    <h3>ハンディキャップについて（2026年度〜）</h3>
+                    <p><strong>算出タイミング：</strong>年2回（1月開始時、6月）</p>
+                    <p>ハンディキャップは直近20ラウンドのベスト8から自動計算されます。</p>
+                    <p>「ハンディキャップ」画面で「更新」ボタンを押すと、現在のスコアから再計算されます。</p>
+                    <p class="note">※1月と6月に更新ボタンを押して、ハンディキャップを確定させてください</p>
                 </div>
             </section>
 

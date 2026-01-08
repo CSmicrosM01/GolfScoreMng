@@ -1378,3 +1378,107 @@ main {
 .btn-refresh:hover {
     background: #0d47a1;
 }
+
+/* ハンディキャップ画面 */
+.handicap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.handicap-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.handicap-item:hover {
+    background: var(--background);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.handicap-user {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.handicap-index {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.handicap-rounds {
+    color: var(--text-secondary);
+    align-self: center;
+}
+
+.handicap-detail {
+    margin-top: 1rem;
+}
+
+.handicap-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 8px;
+}
+
+.summary-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.best-scores-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.best-scores-table th,
+.best-scores-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.best-scores-table th {
+    background: var(--background);
+    font-weight: bold;
+}
+
+.best-scores-table tbody tr:hover {
+    background: var(--background);
+}
+
+/* スコア変化の色分け */
+.score-improved {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.score-worse {
+    color: var(--danger);
+    font-weight: bold;
+}
