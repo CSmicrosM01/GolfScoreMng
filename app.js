@@ -336,7 +336,7 @@ async function saveConfigToLambda(config) {
 }
 
 // ===== データ保存 =====
-async function saveYearData(year) {
+async function saveYearData(year, options = {}) {
     const yearData = appState.yearData[year];
     if (!yearData) return;
 
@@ -345,7 +345,11 @@ async function saveYearData(year) {
 
     // Lambda同期が有効な場合
     if (USE_LAMBDA_SYNC && LAMBDA_FUNCTION_URL) {
-        const success = await saveYearDataToLambda(year, yearData);
+        // replaceMode: 削除操作時はマージせず上書き
+        const dataToSend = options.replaceMode
+            ? { ...yearData, replaceMode: true }
+            : yearData;
+        const success = await saveYearDataToLambda(year, dataToSend);
         if (success) {
             showSaveSuccessNotification();
         } else {
@@ -399,41 +403,12 @@ function saveToLocalStorage() {
 
 // 保存成功通知
 function showSaveSuccessNotification() {
-    const existingNotification = document.getElementById('sync-notification');
-    if (existingNotification) {
-        existingNotification.remove();
-    }
-
-    const notification = document.createElement('div');
-    notification.id = 'sync-notification';
-    notification.className = 'sync-notification success';
-    notification.innerHTML = `
-        <p>データを保存しました</p>
-        <button onclick="closeSyncNotification()" class="btn-primary">OK</button>
-    `;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        closeSyncNotification();
-    }, 3000);
+    alert('データをS3に保存しました。全ユーザーが確認できます。');
 }
 
 // 保存エラー通知
 function showSaveErrorNotification() {
-    const existingNotification = document.getElementById('sync-notification');
-    if (existingNotification) {
-        existingNotification.remove();
-    }
-
-    const notification = document.createElement('div');
-    notification.id = 'sync-notification';
-    notification.className = 'sync-notification error';
-    notification.innerHTML = `
-        <p>保存に失敗しました</p>
-        <button onclick="downloadDataForS3()" class="btn-primary">手動でダウンロード</button>
-        <button onclick="closeSyncNotification()" class="btn-secondary">閉じる</button>
-    `;
-    document.body.appendChild(notification);
+    alert('S3への保存に失敗しました。ネットワーク接続を確認してください。');
 }
 
 // S3へのアップロード通知
@@ -618,8 +593,8 @@ function updateLoginStats() {
         return {
             user,
             rounds: userRounds.length,
-            average: scores.length >= MIN_ROUNDS ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
-            isValid: scores.length >= MIN_ROUNDS
+            average: scores.length >= 1 ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
+            isValid: scores.length >= 1
         };
     }).filter(r => r.isValid)
       .sort((a, b) => a.average - b.average);
@@ -663,6 +638,16 @@ function updateLoginStats() {
     const bestParOn = getBestParOnRate(rounds);
     document.getElementById('login-best-paron').textContent = bestParOn.rate ? bestParOn.rate.toFixed(1) + '%' : '-';
     document.getElementById('login-best-paron-holder').textContent = bestParOn.user ? withSan(bestParOn.user) : '-';
+
+    // 誤差ベスト（平均スコア変化）
+    const bestImprovement = getBestScoreChange();
+    if (bestImprovement.change !== null) {
+        const sign = bestImprovement.change > 0 ? '+' : '';
+        document.getElementById('login-best-improvement').textContent = sign + bestImprovement.change.toFixed(1);
+    } else {
+        document.getElementById('login-best-improvement').textContent = '-';
+    }
+    document.getElementById('login-best-improvement-holder').textContent = bestImprovement.user ? withSan(bestImprovement.user) : '-';
 }
 
 // ===== ログイン/ログアウト =====
@@ -699,6 +684,12 @@ function logout() {
 
 // ===== イベントリスナー =====
 function setupEventListeners() {
+    // 重複登録を防ぐためのチェック
+    if (document.getElementById('logout-btn').hasAttribute('data-listener-added')) {
+        return;
+    }
+    document.getElementById('logout-btn').setAttribute('data-listener-added', 'true');
+
     document.getElementById('logout-btn').addEventListener('click', logout);
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -870,8 +861,8 @@ function updateDashboardRanking(rounds) {
         return {
             user,
             rounds: userRounds.length,
-            average: scores.length >= MIN_ROUNDS ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
-            isValid: scores.length >= MIN_ROUNDS
+            average: scores.length >= 1 ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
+            isValid: scores.length >= 1
         };
     }).filter(r => r.isValid)
       .sort((a, b) => a.average - b.average);
@@ -913,7 +904,7 @@ function updateRankings() {
     // ネット（HC適用）とグロス（HCなし）の両方を表示
     updateOverallRanking(yearData.rounds, true, 'overall-ranking-net');  // ネット
     updateOverallRanking(yearData.rounds, false, 'overall-ranking-gross'); // グロス
-    updateBestScoreRanking(yearData.rounds, true);  // ベストスコアはネットで表示
+    updateBestScoreRanking(yearData.rounds, false);  // ベストスコアはグロスで表示
     updatePuttRanking(yearData.rounds);
     updateParOnRanking(yearData.rounds);
     updateScoreChangeRanking();
@@ -938,8 +929,8 @@ function updateOverallRanking(rounds, applyHandicap, tableId) {
         return {
             user,
             rounds: userRounds.length,
-            average: scores.length >= MIN_ROUNDS ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
-            isValid: scores.length >= MIN_ROUNDS
+            average: scores.length >= 1 ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
+            isValid: scores.length >= 1
         };
     }).filter(r => r.isValid)
       .sort((a, b) => a.average - b.average);
@@ -1041,8 +1032,8 @@ function updatePuttRanking(rounds) {
         return {
             user,
             rounds: userRounds.length,
-            average: putts.length >= MIN_ROUNDS ? putts.reduce((a, b) => a + b, 0) / putts.length : null,
-            isValid: putts.length >= MIN_ROUNDS
+            average: putts.length >= 1 ? putts.reduce((a, b) => a + b, 0) / putts.length : null,
+            isValid: putts.length >= 1
         };
     }).filter(r => r.isValid)
       .sort((a, b) => a.average - b.average);
@@ -1075,34 +1066,48 @@ function updateParOnRanking(rounds) {
 
     const rankings = USERS.map(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].parOn !== undefined);
-        const parOnRates = userRounds.map(r => r.scores[user].parOn);
 
-        // パーオン率（%）の平均を計算
-        const avgParOnRate = parOnRates.length >= MIN_ROUNDS
-            ? parOnRates.reduce((a, b) => a + b, 0) / parOnRates.length
-            : null;
+        if (userRounds.length < 1) {
+            return { user, isValid: false };
+        }
+
+        // Par3/Par4/Par5それぞれの平均を計算
+        const par3Rates = userRounds.map(r => r.scores[user].parOn?.par3).filter(v => v !== undefined && !isNaN(v));
+        const par4Rates = userRounds.map(r => r.scores[user].parOn?.par4).filter(v => v !== undefined && !isNaN(v));
+        const par5Rates = userRounds.map(r => r.scores[user].parOn?.par5).filter(v => v !== undefined && !isNaN(v));
+
+        const avgPar3 = par3Rates.length > 0 ? par3Rates.reduce((a, b) => a + b, 0) / par3Rates.length : null;
+        const avgPar4 = par4Rates.length > 0 ? par4Rates.reduce((a, b) => a + b, 0) / par4Rates.length : null;
+        const avgPar5 = par5Rates.length > 0 ? par5Rates.reduce((a, b) => a + b, 0) / par5Rates.length : null;
+
+        // 総合パーオン率を計算
+        const totalRates = userRounds.map(r => calculateTotalParOnRate(r.scores[user].parOn)).filter(r => r !== null);
+        const avgTotal = totalRates.length > 0 ? totalRates.reduce((a, b) => a + b, 0) / totalRates.length : null;
 
         return {
             user,
             rounds: userRounds.length,
-            parOnRate: avgParOnRate,
-            isValid: parOnRates.length >= MIN_ROUNDS
+            par3: avgPar3,
+            par4: avgPar4,
+            par5: avgPar5,
+            total: avgTotal,
+            isValid: avgTotal !== null
         };
     }).filter(r => r.isValid)
-      .sort((a, b) => b.parOnRate - a.parOnRate); // 降順（高い方が上位）
+      .sort((a, b) => b.total - a.total); // 総合で降順
 
     let currentRank = 1;
     let prevRate = null;
     rankings.forEach((r, i) => {
-        if (prevRate !== null && r.parOnRate.toFixed(1) !== prevRate.toFixed(1)) {
+        if (prevRate !== null && r.total.toFixed(1) !== prevRate.toFixed(1)) {
             currentRank = i + 1;
         }
         r.rank = currentRank;
-        prevRate = r.parOnRate;
+        prevRate = r.total;
     });
 
     if (rankings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="no-data">データが不足しています</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="no-data">データが不足しています</td></tr>';
         return;
     }
 
@@ -1110,7 +1115,10 @@ function updateParOnRanking(rounds) {
         <tr class="${r.rank === 1 ? 'rank-1' : ''}">
             <td>${r.rank}</td>
             <td>${r.user}</td>
-            <td>${r.parOnRate.toFixed(1)}%</td>
+            <td>${r.par3 !== null ? r.par3.toFixed(1) + '%' : '-'}</td>
+            <td>${r.par4 !== null ? r.par4.toFixed(1) + '%' : '-'}</td>
+            <td>${r.par5 !== null ? r.par5.toFixed(1) + '%' : '-'}</td>
+            <td><strong>${r.total.toFixed(1)}%</strong></td>
             <td>${r.rounds}回</td>
         </tr>
     `).join('');
@@ -1141,8 +1149,8 @@ function updateScoreChangeRanking() {
         const currentScores = currentUserRounds.map(r => r.scores[user].score);
         const lastScores = lastUserRounds.map(r => r.scores[user].score);
 
-        const currentAvg = currentScores.length >= MIN_ROUNDS ? currentScores.reduce((a, b) => a + b, 0) / currentScores.length : null;
-        const lastAvg = lastScores.length >= MIN_ROUNDS ? lastScores.reduce((a, b) => a + b, 0) / lastScores.length : null;
+        const currentAvg = currentScores.length >= 1 ? currentScores.reduce((a, b) => a + b, 0) / currentScores.length : null;
+        const lastAvg = lastScores.length >= 1 ? lastScores.reduce((a, b) => a + b, 0) / lastScores.length : null;
 
         const change = (currentAvg !== null && lastAvg !== null) ? currentAvg - lastAvg : null;
 
@@ -1291,12 +1299,17 @@ function setupInputForm() {
 
         container.innerHTML = USERS.map(user => {
             const scoreData = round.scores[user] || {};
+            const parOn = scoreData.parOn || {};
             return `
                 <div class="score-input-item">
                     <label>${user}</label>
                     <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric" value="${scoreData.score || ''}">
                     <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric" value="${scoreData.putt || ''}">
-                    <input type="number" id="paron-${user}" placeholder="パーオン率(%)" min="0" max="100" step="0.1" inputmode="decimal" value="${scoreData.parOn || ''}">
+                    <div class="paron-bulk-inputs">
+                        <input type="number" id="paron-par3-${user}" placeholder="Par3" min="0" max="100" step="0.1" inputmode="decimal" value="${parOn.par3 || ''}">
+                        <input type="number" id="paron-par4-${user}" placeholder="Par4" min="0" max="100" step="0.1" inputmode="decimal" value="${parOn.par4 || ''}">
+                        <input type="number" id="paron-par5-${user}" placeholder="Par5" min="0" max="100" step="0.1" inputmode="decimal" value="${parOn.par5 || ''}">
+                    </div>
                 </div>
             `;
         }).join('');
@@ -1317,7 +1330,11 @@ function setupInputForm() {
                 <label>${user}</label>
                 <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric">
                 <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric">
-                <input type="number" id="paron-${user}" placeholder="パーオン率(%)" min="0" max="100" step="0.1" inputmode="decimal">
+                <div class="paron-bulk-inputs">
+                    <input type="number" id="paron-par3-${user}" placeholder="Par3" min="0" max="100" step="0.1" inputmode="decimal">
+                    <input type="number" id="paron-par4-${user}" placeholder="Par4" min="0" max="100" step="0.1" inputmode="decimal">
+                    <input type="number" id="paron-par5-${user}" placeholder="Par5" min="0" max="100" step="0.1" inputmode="decimal">
+                </div>
             </div>
         `).join('');
 
@@ -1389,7 +1406,9 @@ async function saveMyScore() {
     const course = document.getElementById('my-input-course').value;
     const score = parseInt(document.getElementById('my-input-score').value);
     const putt = parseInt(document.getElementById('my-input-putt').value);
-    const parOn = parseFloat(document.getElementById('my-input-paron').value);
+    const parOnPar3 = parseFloat(document.getElementById('my-input-paron-par3').value);
+    const parOnPar4 = parseFloat(document.getElementById('my-input-paron-par4').value);
+    const parOnPar5 = parseFloat(document.getElementById('my-input-paron-par5').value);
     const selectedYear = parseInt(document.getElementById('my-input-year').value);
 
     if (!date || !course) {
@@ -1401,6 +1420,12 @@ async function saveMyScore() {
         alert('スコアを入力してください');
         return;
     }
+
+    // パーオン率オブジェクトを作成
+    const parOn = {};
+    if (!isNaN(parOnPar3)) parOn.par3 = parOnPar3;
+    if (!isNaN(parOnPar4)) parOn.par4 = parOnPar4;
+    if (!isNaN(parOnPar5)) parOn.par5 = parOnPar5;
 
     // 年度データがなければ作成
     if (!appState.yearData[selectedYear]) {
@@ -1418,8 +1443,7 @@ async function saveMyScore() {
     if (existingRound) {
         existingRound.scores[user] = { score };
         if (putt) existingRound.scores[user].putt = putt;
-        if (parOn) existingRound.scores[user].parOn = parOn;
-        alert('スコアを更新しました');
+        if (Object.keys(parOn).length > 0) existingRound.scores[user].parOn = parOn;
     } else {
         const roundNumber = yearData.rounds.length + 1;
         const newRound = {
@@ -1431,9 +1455,8 @@ async function saveMyScore() {
             }
         };
         if (putt) newRound.scores[user].putt = putt;
-        if (parOn) newRound.scores[user].parOn = parOn;
+        if (Object.keys(parOn).length > 0) newRound.scores[user].parOn = parOn;
         yearData.rounds.push(newRound);
-        alert(`${selectedYear}年のスコアを保存しました`);
     }
 
     await saveYearData(selectedYear);
@@ -1441,7 +1464,9 @@ async function saveMyScore() {
     document.getElementById('my-input-course').value = '';
     document.getElementById('my-input-score').value = '';
     document.getElementById('my-input-putt').value = '';
-    document.getElementById('my-input-paron').value = '';
+    document.getElementById('my-input-paron-par3').value = '';
+    document.getElementById('my-input-paron-par4').value = '';
+    document.getElementById('my-input-paron-par5').value = '';
 
     updateAllViews();
 }
@@ -1490,10 +1515,10 @@ async function deleteRound() {
         round.roundNumber = i + 1;
     });
 
-    await saveYearData(year);
+    // 削除操作はreplaceModeで上書き保存（マージすると復活するため）
+    await saveYearData(year, { replaceMode: true });
     appState.editingRound = null;
     appState.editingYear = null;
-    alert('ラウンドを削除しました');
     updateAllViews();
     switchTab('scores');
 }
@@ -1514,12 +1539,21 @@ async function saveScore() {
     USERS.forEach(user => {
         const score = parseInt(document.getElementById(`score-${user}`).value);
         const putt = parseInt(document.getElementById(`putt-${user}`).value);
-        const parOn = parseFloat(document.getElementById(`paron-${user}`)?.value);
+        const parOnPar3 = parseFloat(document.getElementById(`paron-par3-${user}`)?.value);
+        const parOnPar4 = parseFloat(document.getElementById(`paron-par4-${user}`)?.value);
+        const parOnPar5 = parseFloat(document.getElementById(`paron-par5-${user}`)?.value);
 
         if (score) {
             scores[user] = { score };
             if (putt) scores[user].putt = putt;
-            if (parOn) scores[user].parOn = parOn;
+
+            // パーオン率オブジェクトを作成
+            const parOn = {};
+            if (!isNaN(parOnPar3)) parOn.par3 = parOnPar3;
+            if (!isNaN(parOnPar4)) parOn.par4 = parOnPar4;
+            if (!isNaN(parOnPar5)) parOn.par5 = parOnPar5;
+            if (Object.keys(parOn).length > 0) scores[user].parOn = parOn;
+
             hasAnyScore = true;
         }
     });
@@ -1554,7 +1588,6 @@ async function saveScore() {
         round.date = date;
         round.course = course;
         round.scores = scores;
-        alert('スコアを更新しました');
     } else {
         const roundNumber = yearData.rounds.length + 1;
 
@@ -1566,41 +1599,40 @@ async function saveScore() {
         };
 
         yearData.rounds.push(newRound);
+    }
 
-        const hioUser = document.getElementById('hole-in-one-input').value;
-        const hioHole = document.getElementById('hole-in-one-hole').value;
-        if (hioUser && hioHole) {
-            yearData.holeInOnes.push({
-                user: hioUser,
-                date,
-                course,
-                hole: parseInt(hioHole)
-            });
-        }
+    // 特別達成は新規・編集どちらでも追加可能
+    const hioUser = document.getElementById('hole-in-one-input').value;
+    const hioHole = document.getElementById('hole-in-one-hole').value;
+    if (hioUser && hioHole) {
+        yearData.holeInOnes.push({
+            user: hioUser,
+            date,
+            course,
+            hole: parseInt(hioHole)
+        });
+    }
 
-        const eagleUser = document.getElementById('eagle-input').value;
-        const eagleHole = document.getElementById('eagle-hole').value;
-        if (eagleUser && eagleHole) {
-            yearData.eagles.push({
-                user: eagleUser,
-                date,
-                course,
-                hole: parseInt(eagleHole)
-            });
-        }
+    const eagleUser = document.getElementById('eagle-input').value;
+    const eagleHole = document.getElementById('eagle-hole').value;
+    if (eagleUser && eagleHole) {
+        yearData.eagles.push({
+            user: eagleUser,
+            date,
+            course,
+            hole: parseInt(eagleHole)
+        });
+    }
 
-        const albatrossUser = document.getElementById('albatross-input')?.value;
-        const albatrossHole = document.getElementById('albatross-hole')?.value;
-        if (albatrossUser && albatrossHole) {
-            yearData.albatrosses.push({
-                user: albatrossUser,
-                date,
-                course,
-                hole: parseInt(albatrossHole)
-            });
-        }
-
-        alert(`${year}年のスコアを保存しました`);
+    const albatrossUser = document.getElementById('albatross-input')?.value;
+    const albatrossHole = document.getElementById('albatross-hole')?.value;
+    if (albatrossUser && albatrossHole) {
+        yearData.albatrosses.push({
+            user: albatrossUser,
+            date,
+            course,
+            hole: parseInt(albatrossHole)
+        });
     }
 
     await saveYearData(year);
@@ -1617,10 +1649,10 @@ async function saveScore() {
     document.getElementById('hole-in-one-hole').value = '';
     document.getElementById('eagle-input').value = '';
     document.getElementById('eagle-hole').value = '';
-    const albatrossInput = document.getElementById('albatross-input');
-    const albatrossHole = document.getElementById('albatross-hole');
-    if (albatrossInput) albatrossInput.value = '';
-    if (albatrossHole) albatrossHole.value = '';
+    const albatrossInputEl = document.getElementById('albatross-input');
+    const albatrossHoleEl = document.getElementById('albatross-hole');
+    if (albatrossInputEl) albatrossInputEl.value = '';
+    if (albatrossHoleEl) albatrossHoleEl.value = '';
 
     updateAllViews();
 }
@@ -1913,7 +1945,7 @@ function getBestScore(rounds) {
     let best = { score: null, user: null };
 
     const participationCounts = getParticipationCounts(rounds);
-    const validUsers = USERS.filter(u => participationCounts[u] >= MIN_ROUNDS);
+    const validUsers = USERS.filter(u => participationCounts[u] >= 1);
 
     validRounds.forEach(round => {
         validUsers.forEach(user => {
@@ -1933,13 +1965,13 @@ function getBestPuttAverage(rounds) {
     const validRounds = rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
 
     const participationCounts = getParticipationCounts(rounds);
-    const validUsers = USERS.filter(u => participationCounts[u] >= MIN_ROUNDS);
+    const validUsers = USERS.filter(u => participationCounts[u] >= 1);
 
     let best = { average: null, user: null };
 
     validUsers.forEach(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].putt);
-        if (userRounds.length >= MIN_ROUNDS) {
+        if (userRounds.length >= 1) {
             const putts = userRounds.map(r => r.scores[user].putt);
             const avg = putts.reduce((a, b) => a + b, 0) / putts.length;
 
@@ -1953,23 +1985,100 @@ function getBestPuttAverage(rounds) {
     return best;
 }
 
+// 総合パーオン率を計算（Par3:4H, Par4:10H, Par5:4Hの重み付け平均）
+function calculateTotalParOnRate(parOn) {
+    if (!parOn || typeof parOn !== 'object') return null;
+
+    const par3 = parOn.par3;
+    const par4 = parOn.par4;
+    const par5 = parOn.par5;
+
+    // 少なくとも1つは値が必要
+    if (par3 === undefined && par4 === undefined && par5 === undefined) return null;
+
+    // 標準的なコース構成: Par3=4H, Par4=10H, Par5=4H (合計18H)
+    const par3Holes = 4;
+    const par4Holes = 10;
+    const par5Holes = 4;
+
+    let totalWeightedRate = 0;
+    let totalHoles = 0;
+
+    if (par3 !== undefined && !isNaN(par3)) {
+        totalWeightedRate += par3 * par3Holes;
+        totalHoles += par3Holes;
+    }
+    if (par4 !== undefined && !isNaN(par4)) {
+        totalWeightedRate += par4 * par4Holes;
+        totalHoles += par4Holes;
+    }
+    if (par5 !== undefined && !isNaN(par5)) {
+        totalWeightedRate += par5 * par5Holes;
+        totalHoles += par5Holes;
+    }
+
+    if (totalHoles === 0) return null;
+    return totalWeightedRate / totalHoles;
+}
+
 function getBestParOnRate(rounds) {
     const validRounds = rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
 
     const participationCounts = getParticipationCounts(rounds);
-    const validUsers = USERS.filter(u => participationCounts[u] >= MIN_ROUNDS);
+    const validUsers = USERS.filter(u => participationCounts[u] >= 1);
 
     let best = { rate: null, user: null };
 
     validUsers.forEach(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].parOn !== undefined);
-        if (userRounds.length >= MIN_ROUNDS) {
-            const parOnRates = userRounds.map(r => r.scores[user].parOn);
-            // パーオン率（%）の平均を計算
-            const avgRate = parOnRates.reduce((a, b) => a + b, 0) / parOnRates.length;
+        if (userRounds.length >= 1) {
+            // 各ラウンドの総合パーオン率を計算して平均
+            const totalRates = userRounds.map(r => calculateTotalParOnRate(r.scores[user].parOn)).filter(r => r !== null);
+            if (totalRates.length >= 1) {
+                const avgRate = totalRates.reduce((a, b) => a + b, 0) / totalRates.length;
 
-            if (best.rate === null || avgRate > best.rate) {
-                best.rate = avgRate;
+                if (best.rate === null || avgRate > best.rate) {
+                    best.rate = avgRate;
+                    best.user = user;
+                }
+            }
+        }
+    });
+
+    return best;
+}
+
+function getBestScoreChange() {
+    const currentYear = appState.currentYear;
+    const lastYear = currentYear - 1;
+
+    const currentYearData = appState.yearData[currentYear];
+    const lastYearData = appState.yearData[lastYear];
+
+    if (!currentYearData || !lastYearData) {
+        return { change: null, user: null };
+    }
+
+    const currentValidRounds = currentYearData.rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
+    const lastValidRounds = lastYearData.rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
+
+    let best = { change: null, user: null };
+
+    USERS.forEach(user => {
+        const currentUserRounds = currentValidRounds.filter(r => r.scores[user] && r.scores[user].score);
+        const lastUserRounds = lastValidRounds.filter(r => r.scores[user] && r.scores[user].score);
+
+        const currentScores = currentUserRounds.map(r => r.scores[user].score);
+        const lastScores = lastUserRounds.map(r => r.scores[user].score);
+
+        if (currentScores.length >= 1 && lastScores.length >= 1) {
+            const currentAvg = currentScores.reduce((a, b) => a + b, 0) / currentScores.length;
+            const lastAvg = lastScores.reduce((a, b) => a + b, 0) / lastScores.length;
+            const change = currentAvg - lastAvg;
+
+            // 最も上達した人（changeが小さい＝マイナスが大きい）
+            if (best.change === null || change < best.change) {
+                best.change = change;
                 best.user = user;
             }
         }

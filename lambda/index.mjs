@@ -85,7 +85,13 @@ export const handler = async (event) => {
                 // 年度別データを保存
                 const yearToSave = bodyData.year;
                 console.log(`年度データ保存開始: ${yearToSave}`, JSON.stringify(bodyData).substring(0, 200));
-                await saveYearData(yearToSave, bodyData);
+
+                // replaceMode: true の場合はマージせずに上書き（削除操作用）
+                if (bodyData.replaceMode) {
+                    await saveYearDataDirect(yearToSave, bodyData);
+                } else {
+                    await saveYearData(yearToSave, bodyData);
+                }
 
                 // config.jsonのavailableYearsを更新
                 await updateAvailableYears(yearToSave);
@@ -217,15 +223,122 @@ async function getYearData(year) {
     }
 }
 
-// 年度別データを保存
-async function saveYearData(year, data) {
+// 年度別データを保存（既存データとマージ）
+async function saveYearData(year, newData) {
+    // 既存データを取得
+    const existingData = await getYearData(year);
+
+    // データをマージ
+    const mergedData = mergeYearData(existingData, newData);
+
     const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: `data-${year}.json`,
-        Body: JSON.stringify(data, null, 2),
+        Body: JSON.stringify(mergedData, null, 2),
         ContentType: 'application/json'
     });
     await s3Client.send(command);
+}
+
+// 年度別データを直接保存（マージなし、削除操作用）
+async function saveYearDataDirect(year, data) {
+    // replaceModeプロパティを除去して保存
+    const saveData = { ...data };
+    delete saveData.replaceMode;
+
+    const command = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: `data-${year}.json`,
+        Body: JSON.stringify(saveData, null, 2),
+        ContentType: 'application/json'
+    });
+    await s3Client.send(command);
+}
+
+// 年度データをマージ（既存データを保持しつつ新データを追加・更新）
+function mergeYearData(existingData, newData) {
+    const merged = {
+        year: newData.year || existingData.year,
+        rounds: [],
+        holeInOnes: existingData.holeInOnes || [],
+        eagles: existingData.eagles || [],
+        albatrosses: existingData.albatrosses || [],
+        cupName: newData.cupName || existingData.cupName || "正本杯"
+    };
+
+    // ラウンドデータをマージ
+    // 既存のラウンドをマップに格納（日付+コースをキーとする）
+    const roundMap = new Map();
+
+    // 既存データを先に追加
+    if (existingData.rounds) {
+        existingData.rounds.forEach(round => {
+            const key = `${round.date}_${round.course}`;
+            roundMap.set(key, { ...round });
+        });
+    }
+
+    // 新データをマージ（同じ日付+コースなら各ユーザーのスコアをマージ）
+    if (newData.rounds) {
+        newData.rounds.forEach(newRound => {
+            const key = `${newRound.date}_${newRound.course}`;
+
+            if (roundMap.has(key)) {
+                // 既存ラウンドがある場合、スコアをマージ
+                const existingRound = roundMap.get(key);
+                existingRound.scores = {
+                    ...existingRound.scores,
+                    ...newRound.scores
+                };
+                roundMap.set(key, existingRound);
+            } else {
+                // 新規ラウンド
+                roundMap.set(key, { ...newRound });
+            }
+        });
+    }
+
+    // マップから配列に変換し、日付でソート
+    merged.rounds = Array.from(roundMap.values())
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+    // ラウンド番号を振り直す
+    merged.rounds.forEach((round, index) => {
+        round.roundNumber = index + 1;
+    });
+
+    // ホールインワン、イーグル、アルバトロスをマージ（重複除去）
+    if (newData.holeInOnes) {
+        merged.holeInOnes = mergeAchievements(existingData.holeInOnes || [], newData.holeInOnes);
+    }
+    if (newData.eagles) {
+        merged.eagles = mergeAchievements(existingData.eagles || [], newData.eagles);
+    }
+    if (newData.albatrosses) {
+        merged.albatrosses = mergeAchievements(existingData.albatrosses || [], newData.albatrosses);
+    }
+
+    return merged;
+}
+
+// 達成記録をマージ（重複除去）
+function mergeAchievements(existing, newItems) {
+    const achievementMap = new Map();
+
+    // キーを生成する関数
+    const getKey = (item) => `${item.user}_${item.date}_${item.course}_${item.hole}`;
+
+    // 既存データを追加
+    existing.forEach(item => {
+        achievementMap.set(getKey(item), item);
+    });
+
+    // 新データを追加（重複は上書き）
+    newItems.forEach(item => {
+        achievementMap.set(getKey(item), item);
+    });
+
+    return Array.from(achievementMap.values());
 }
 
 // config.jsonのavailableYearsを更新
