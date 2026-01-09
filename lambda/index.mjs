@@ -58,10 +58,19 @@ export const handler = async (event) => {
         } else if (method === 'POST') {
             // データ保存（関数URLの場合、bodyはbase64エンコードされている可能性）
             let bodyData;
-            if (event.isBase64Encoded) {
-                bodyData = JSON.parse(Buffer.from(event.body, 'base64').toString('utf-8'));
-            } else {
-                bodyData = JSON.parse(event.body);
+            try {
+                if (event.isBase64Encoded) {
+                    bodyData = JSON.parse(Buffer.from(event.body, 'base64').toString('utf-8'));
+                } else {
+                    bodyData = JSON.parse(event.body);
+                }
+            } catch (parseError) {
+                console.error('JSON解析エラー:', parseError);
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ error: 'JSONデータの解析に失敗しました', details: parseError.message })
+                };
             }
 
             if (action === 'config') {
@@ -75,6 +84,7 @@ export const handler = async (event) => {
             } else if (bodyData.year) {
                 // 年度別データを保存
                 const yearToSave = bodyData.year;
+                console.log(`年度データ保存開始: ${yearToSave}`, JSON.stringify(bodyData).substring(0, 200));
                 await saveYearData(yearToSave, bodyData);
 
                 // config.jsonのavailableYearsを更新
@@ -86,10 +96,11 @@ export const handler = async (event) => {
                     body: JSON.stringify({ message: `${yearToSave}年のデータを保存しました` })
                 };
             } else {
+                console.error('年度プロパティがありません:', bodyData);
                 return {
                     statusCode: 400,
                     headers,
-                    body: JSON.stringify({ error: '年度が指定されていません' })
+                    body: JSON.stringify({ error: '年度が指定されていません', receivedKeys: Object.keys(bodyData) })
                 };
             }
         }
@@ -100,11 +111,16 @@ export const handler = async (event) => {
             body: JSON.stringify({ error: '不正なリクエストです' })
         };
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Lambda実行エラー:', error);
+        console.error('エラースタック:', error.stack);
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: error.message })
+            body: JSON.stringify({
+                error: error.message,
+                errorType: error.name,
+                stack: error.stack
+            })
         };
     }
 };
@@ -194,7 +210,7 @@ async function getYearData(year) {
                 holeInOnes: [],
                 eagles: [],
                 albatrosses: [],
-                cupName: "松本杯"
+                cupName: "正本杯"
             };
         }
         throw error;

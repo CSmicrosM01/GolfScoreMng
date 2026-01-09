@@ -128,7 +128,7 @@ async function loadData() {
                     holeInOnes: data.years[year].holeInOnes || [],
                     eagles: data.years[year].eagles || [],
                     albatrosses: data.years[year].albatrosses || [],
-                    cupName: data.cupNames?.[year] || '松本杯'
+                    cupName: data.cupNames?.[year] || '正本杯'
                 };
                 if (!appState.availableYears.includes(parseInt(year))) {
                     appState.availableYears.push(parseInt(year));
@@ -149,7 +149,7 @@ async function loadData() {
                 holeInOnes: initialData.years[year].holeInOnes || [],
                 eagles: initialData.years[year].eagles || [],
                 albatrosses: initialData.years[year].albatrosses || [],
-                cupName: initialData.cupNames?.[year] || '松本杯'
+                cupName: initialData.cupNames?.[year] || '正本杯'
             };
             if (!appState.availableYears.includes(parseInt(year))) {
                 appState.availableYears.push(parseInt(year));
@@ -195,7 +195,7 @@ function getEmptyYearData(year) {
         holeInOnes: [],
         eagles: [],
         albatrosses: [],
-        cupName: '松本杯'
+        cupName: '正本杯'
     };
 }
 
@@ -299,12 +299,17 @@ async function fetchYearData(year) {
 // 年度データを保存
 async function saveYearDataToLambda(year, data) {
     try {
+        console.log('Lambda送信データ:', data); // デバッグ用
         const response = await fetch(LAMBDA_FUNCTION_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        if (!response.ok) throw new Error('年度データ保存エラー');
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Lambda エラーレスポンス:', errorText);
+            throw new Error(`年度データ保存エラー: ${response.status} ${errorText}`);
+        }
         console.log(`${year}年データを保存しました`);
         return true;
     } catch (error) {
@@ -653,6 +658,11 @@ function updateLoginStats() {
     const bestPutt = getBestPuttAverage(rounds);
     document.getElementById('login-best-putt').textContent = bestPutt.average ? bestPutt.average.toFixed(2) : '-';
     document.getElementById('login-best-putt-holder').textContent = bestPutt.user ? withSan(bestPutt.user) : '-';
+
+    // パーオン率ベスト
+    const bestParOn = getBestParOnRate(rounds);
+    document.getElementById('login-best-paron').textContent = bestParOn.rate ? bestParOn.rate.toFixed(1) + '%' : '-';
+    document.getElementById('login-best-paron-holder').textContent = bestParOn.user ? withSan(bestParOn.user) : '-';
 }
 
 // ===== ログイン/ログアウト =====
@@ -769,6 +779,10 @@ function updateDashboard() {
     const bestPutt = getBestPuttAverage(yearData.rounds);
     document.getElementById('best-putt-value').textContent = bestPutt.average ? bestPutt.average.toFixed(2) : '-';
     document.getElementById('best-putt-holder').textContent = bestPutt.user ? withSan(bestPutt.user) : '-';
+
+    const bestParOn = getBestParOnRate(yearData.rounds);
+    document.getElementById('best-paron-value').textContent = bestParOn.rate ? bestParOn.rate.toFixed(1) + '%' : '-';
+    document.getElementById('best-paron-holder').textContent = bestParOn.user ? withSan(bestParOn.user) : '-';
 
     updateMyStats(yearData.rounds);
     updateSpecialAchievements(yearData);
@@ -1061,17 +1075,18 @@ function updateParOnRanking(rounds) {
 
     const rankings = USERS.map(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].parOn !== undefined);
-        const parOns = userRounds.map(r => r.scores[user].parOn);
+        const parOnRates = userRounds.map(r => r.scores[user].parOn);
 
-        const totalParOns = parOns.reduce((a, b) => a + b, 0);
-        const totalHoles = userRounds.length * 18;
-        const parOnRate = parOns.length >= MIN_ROUNDS ? (totalParOns / totalHoles) * 100 : null;
+        // パーオン率（%）の平均を計算
+        const avgParOnRate = parOnRates.length >= MIN_ROUNDS
+            ? parOnRates.reduce((a, b) => a + b, 0) / parOnRates.length
+            : null;
 
         return {
             user,
             rounds: userRounds.length,
-            parOnRate,
-            isValid: parOns.length >= MIN_ROUNDS
+            parOnRate: avgParOnRate,
+            isValid: parOnRates.length >= MIN_ROUNDS
         };
     }).filter(r => r.isValid)
       .sort((a, b) => b.parOnRate - a.parOnRate); // 降順（高い方が上位）
@@ -1281,7 +1296,7 @@ function setupInputForm() {
                     <label>${user}</label>
                     <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric" value="${scoreData.score || ''}">
                     <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric" value="${scoreData.putt || ''}">
-                    <input type="number" id="paron-${user}" placeholder="パーオン" min="0" max="18" inputmode="numeric" value="${scoreData.parOn || ''}">
+                    <input type="number" id="paron-${user}" placeholder="パーオン率(%)" min="0" max="100" step="0.1" inputmode="decimal" value="${scoreData.parOn || ''}">
                 </div>
             `;
         }).join('');
@@ -1302,7 +1317,7 @@ function setupInputForm() {
                 <label>${user}</label>
                 <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric">
                 <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric">
-                <input type="number" id="paron-${user}" placeholder="パーオン" min="0" max="18" inputmode="numeric">
+                <input type="number" id="paron-${user}" placeholder="パーオン率(%)" min="0" max="100" step="0.1" inputmode="decimal">
             </div>
         `).join('');
 
@@ -1374,7 +1389,7 @@ async function saveMyScore() {
     const course = document.getElementById('my-input-course').value;
     const score = parseInt(document.getElementById('my-input-score').value);
     const putt = parseInt(document.getElementById('my-input-putt').value);
-    const parOn = parseInt(document.getElementById('my-input-paron').value);
+    const parOn = parseFloat(document.getElementById('my-input-paron').value);
     const selectedYear = parseInt(document.getElementById('my-input-year').value);
 
     if (!date || !course) {
@@ -1499,7 +1514,7 @@ async function saveScore() {
     USERS.forEach(user => {
         const score = parseInt(document.getElementById(`score-${user}`).value);
         const putt = parseInt(document.getElementById(`putt-${user}`).value);
-        const parOn = parseInt(document.getElementById(`paron-${user}`)?.value);
+        const parOn = parseFloat(document.getElementById(`paron-${user}`)?.value);
 
         if (score) {
             scores[user] = { score };
@@ -1705,7 +1720,7 @@ function getCupName() {
     if (yearData && yearData.cupName) {
         return yearData.cupName;
     }
-    return '松本杯';
+    return '正本杯';
 }
 
 function updateCupName() {
@@ -1842,7 +1857,7 @@ function importData(e) {
                             rounds: importedData.years[year].rounds || [],
                             holeInOnes: importedData.years[year].holeInOnes || [],
                             eagles: importedData.years[year].eagles || [],
-                            cupName: importedData.cupNames?.[year] || '松本杯'
+                            cupName: importedData.cupNames?.[year] || '正本杯'
                         };
                         if (!appState.availableYears.includes(parseInt(year))) {
                             appState.availableYears.push(parseInt(year));
@@ -1930,6 +1945,31 @@ function getBestPuttAverage(rounds) {
 
             if (best.average === null || avg < best.average) {
                 best.average = avg;
+                best.user = user;
+            }
+        }
+    });
+
+    return best;
+}
+
+function getBestParOnRate(rounds) {
+    const validRounds = rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
+
+    const participationCounts = getParticipationCounts(rounds);
+    const validUsers = USERS.filter(u => participationCounts[u] >= MIN_ROUNDS);
+
+    let best = { rate: null, user: null };
+
+    validUsers.forEach(user => {
+        const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].parOn !== undefined);
+        if (userRounds.length >= MIN_ROUNDS) {
+            const parOnRates = userRounds.map(r => r.scores[user].parOn);
+            // パーオン率（%）の平均を計算
+            const avgRate = parOnRates.reduce((a, b) => a + b, 0) / parOnRates.length;
+
+            if (best.rate === null || avgRate > best.rate) {
+                best.rate = avgRate;
                 best.user = user;
             }
         }

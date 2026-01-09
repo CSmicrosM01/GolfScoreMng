@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>松本杯 ゴルフスコア管理</title>
+    <title>ゴルフスコア管理</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <!-- ログイン画面 -->
     <div id="login-screen" class="screen">
         <div class="login-container">
-            <h1>松本杯</h1>
+            <h1>正本杯</h1>
             <h2>ゴルフスコア管理</h2>
             <div class="year-selector">
                 <label for="year-select">年度選択:</label>
@@ -47,6 +47,13 @@
                             <span id="login-best-putt-holder" class="stat-holder">-</span>
                         </div>
                     </div>
+                    <div class="login-stat-item">
+                        <h4>パーオン率ベスト</h4>
+                        <div class="login-stat-value">
+                            <span id="login-best-paron" class="stat-number">-</span>
+                            <span id="login-best-paron-holder" class="stat-holder">-</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -81,17 +88,24 @@
             <section id="dashboard" class="tab-content active">
                 <div class="dashboard-grid">
                     <div class="card highlight-card">
-                        <h3>ベストスコア賞</h3>
+                        <h3>ベストスコア</h3>
                         <div class="award-display">
                             <span class="big-number" id="best-score-value">-</span>
                             <span class="award-holder" id="best-score-holder">-</span>
                         </div>
                     </div>
                     <div class="card highlight-card">
-                        <h3>パット平均ベスト賞</h3>
+                        <h3>パット平均ベスト</h3>
                         <div class="award-display">
                             <span class="big-number" id="best-putt-value">-</span>
                             <span class="award-holder" id="best-putt-holder">-</span>
+                        </div>
+                    </div>
+                    <div class="card highlight-card">
+                        <h3>パーオン率ベスト</h3>
+                        <div class="award-display">
+                            <span class="big-number" id="best-paron-value">-</span>
+                            <span class="award-holder" id="best-paron-holder">-</span>
                         </div>
                     </div>
                     <div class="card">
@@ -330,8 +344,8 @@
                             <input type="number" id="my-input-putt" placeholder="例: 36" min="10" max="80" inputmode="numeric">
                         </div>
                         <div class="form-group">
-                            <label for="my-input-paron">パーオン:</label>
-                            <input type="number" id="my-input-paron" placeholder="例: 12" min="0" max="18" inputmode="numeric">
+                            <label for="my-input-paron">パーオン率(%):</label>
+                            <input type="number" id="my-input-paron" placeholder="例: 66.7" min="0" max="100" step="0.1" inputmode="decimal">
                         </div>
                     </div>
 
@@ -514,10 +528,12 @@
                         <div class="special-award-item">
                             <h4>⭐️ パーオン率ランキング1位</h4>
                             <p>今年のラウンドのパーオン率が最も高い人に贈られる賞</p>
+                            <p class="note"><strong>賞品：</strong>ご要望のゴルフボール（5,000円〜6,000円相当）</p>
                         </div>
                         <div class="special-award-item">
                             <h4>⭐️ 平均誤差賞</h4>
                             <p>昨年度と今年度の平均を比較し、スコアが一番上がった人（最も上達した人）に贈られる賞</p>
+                            <p class="note"><strong>賞品：</strong>ご要望のゴルフボール（5,000円〜6,000円相当）</p>
                         </div>
                     </div>
                     <p class="note">※2025年度までのベストスコア賞・平均パット数ランキング1位は廃止されました</p>
@@ -547,18 +563,24 @@
                     <h3>基本的な使い方</h3>
                     <div class="help-section">
                         <h4>1. ログイン</h4>
-                        <p>トップ画面で自分の名前をタップしてログインします。</p>
+                        <p>トップ画面で自分の名前をタップしてログインします。ログイン画面では各ランキングのトップと達成者を確認できます。</p>
                     </div>
                     <div class="help-section">
                         <h4>2. スコアの入力方法</h4>
                         <ul class="rules-list">
-                            <li><strong>スコア入力</strong>: 自分のスコアだけを簡単に入力できます</li>
-                            <li><strong>一括入力</strong>: 全員のスコアをまとめて入力できます（幹事向け）</li>
+                            <li><strong>スコア入力</strong>: 自分のスコア、パット数、パーオン率（%）を簡単に入力できます</li>
+                            <li><strong>一括入力</strong>: 全員のスコア、パット数、パーオン率（%）をまとめて入力できます（幹事向け）</li>
+                            <li>ホールインワン、イーグル、アルバトロスは一括入力画面で記録できます</li>
                         </ul>
                     </div>
                     <div class="help-section">
                         <h4>3. スコアの編集・削除</h4>
                         <p>「スコア一覧」で編集したいラウンドの「編集」ボタンをタップすると、一括入力画面で修正できます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>4. ハンディキャップについて</h4>
+                        <p>ハンディキャップは<strong>WHS（ワールドハンディキャップシステム）</strong>により自動計算されます。スコアを保存すると自動的に更新されます。</p>
+                        <p>年2回（1月・6月）は「ハンディキャップ」タブの「ハンディキャップを更新」ボタンで固定値を設定します。</p>
                     </div>
                 </div>
 
@@ -566,19 +588,34 @@
                     <h3>各画面の説明</h3>
                     <div class="help-section">
                         <h4>ダッシュボード</h4>
-                        <p>ベストスコア賞、パット平均ベスト賞の現在の1位と、自分の成績を確認できます。</p>
+                        <p>ベストスコア、パット平均ベスト、パーオン率ベストの現在の1位と、自分の成績、総合ランキングを確認できます。</p>
+                        <p>ホールインワン、イーグル、アルバトロスの達成者も表示されます。</p>
                     </div>
                     <div class="help-section">
                         <h4>ランキング</h4>
-                        <p>総合順位、ベストスコアランキング、パット平均ランキングを確認できます。ハンディキャップの適用有無を切り替えられます。</p>
+                        <p>以下のランキングを確認できます：</p>
+                        <ul class="rules-list">
+                            <li><strong>総合順位（ネット）</strong>: ハンディキャップ適用後の平均スコアランキング</li>
+                            <li><strong>総合順位（グロス）</strong>: ハンディキャップなしの平均スコアランキング</li>
+                            <li><strong>ベストスコア</strong>: 最高スコアのランキング</li>
+                            <li><strong>パット平均</strong>: 平均パット数のランキング</li>
+                            <li><strong>⭐️ パーオン率</strong>: パーオン率の高い順ランキング（2026年度〜）</li>
+                            <li><strong>⭐️ 平均スコア変化</strong>: 昨年度と比較して最も上達した人のランキング（2026年度〜）</li>
+                        </ul>
                     </div>
                     <div class="help-section">
                         <h4>スコア一覧</h4>
-                        <p>全ラウンドのスコアを一覧で確認できます。ユーザーやコースでフィルタリングも可能です。</p>
+                        <p>全ラウンドのスコア、パット数、パーオン率（%）を一覧で確認できます。ユーザーやコースでフィルタリングも可能です。</p>
+                        <p>参加人数3名未満のラウンドは薄く表示され、ランキングには反映されません。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>ハンディキャップ</h4>
+                        <p>全ユーザーのハンディキャップインデックスを確認できます。ユーザー名をタップすると詳細（対象ラウンド数、ベスト8スコア）が表示されます。</p>
+                        <p>「ハンディキャップを更新」ボタンで、年2回（1月・6月）に現在のHCを固定できます。</p>
                     </div>
                     <div class="help-section">
                         <h4>各賞・ルール</h4>
-                        <p>大会のルールと各賞の内容、ハンディキャップ設定、カップ名の変更ができます。</p>
+                        <p>大会のルールと各賞の内容（2026年度対応）、特別賞、カップ名の名前権利、カップ名の変更ができます。</p>
                     </div>
                 </div>
 
@@ -586,15 +623,16 @@
                     <h3>データ共有について</h3>
                     <div class="help-section">
                         <h4>最新データの取得</h4>
-                        <p>画面上部の「<strong>最新データ取得</strong>」ボタンをタップすると、他の端末で更新されたデータを取得できます。</p>
+                        <p>画面上部の「<strong>最新データ取得</strong>」ボタンをタップすると、AWS S3から最新データを取得できます。他の端末で更新されたデータが反映されます。</p>
                     </div>
                     <div class="help-section">
-                        <h4>データの共有方法</h4>
-                        <p>スコアを保存すると、画面下部に通知が表示されます。「<strong>S3用データをダウンロード</strong>」をタップしてファイルを保存し、S3にアップロードすると他の端末と共有できます。</p>
+                        <h4>データの自動同期</h4>
+                        <p>スコアを保存すると、自動的にAWS S3に同期されます。他の端末では「最新データ取得」をタップすると最新の状態になります。</p>
+                        <p>年度別にデータが管理されており、画面上部で年度を切り替えられます。</p>
                     </div>
                     <div class="help-section">
                         <h4>データのバックアップ</h4>
-                        <p>「一括入力」画面の「エクスポート」でデータをファイルに保存できます。「インポート」で復元できます。</p>
+                        <p>「一括入力」画面の「エクスポート」でデータをJSON形式でファイルに保存できます。「インポート」で復元できます。</p>
                     </div>
                     <div class="help-section">
                         <h4>有効なラウンド</h4>
@@ -606,11 +644,20 @@
                     <h3>設定について</h3>
                     <div class="help-section">
                         <h4>カップ名の変更</h4>
-                        <p>「各賞・ルール」画面で年度ごとのカップ名を変更できます。優勝者の名前が翌年のカップ名になります。</p>
+                        <p>「各賞・ルール」画面で年度ごとのカップ名を変更できます。</p>
+                        <p>カップ名の名前権利は以下の優先順位で決まります：</p>
+                        <ul class="rules-list">
+                            <li>1. ベストスコア更新（80未満）</li>
+                            <li>2. アルバトロス達成</li>
+                            <li>3. ホールインワン達成</li>
+                            <li>4. イーグル達成</li>
+                            <li>5. グロス1位（ハンディキャップなし）</li>
+                        </ul>
                     </div>
                     <div class="help-section">
-                        <h4>ハンディキャップ設定</h4>
-                        <p>「各賞・ルール」画面で各ユーザーのハンディキャップを設定できます。</p>
+                        <h4>ハンディキャップについて</h4>
+                        <p>ハンディキャップはWHSにより自動計算されます。直近20ラウンドのベスト8から算出されます。</p>
+                        <p>年2回（1月・6月）は「ハンディキャップ」タブの「ハンディキャップを更新」ボタンで、その時点のHCを固定できます。</p>
                     </div>
                 </div>
 
@@ -622,15 +669,31 @@
                     </div>
                     <div class="help-section">
                         <h4>Q: 他の人のスコアを入力したい</h4>
-                        <p>A: 「一括入力」画面で全員分のスコアを入力できます。</p>
+                        <p>A: 「一括入力」画面で全員分のスコア、パット数、パーオン率（%）を入力できます。</p>
                     </div>
                     <div class="help-section">
                         <h4>Q: 他の端末で入力したデータが表示されない</h4>
-                        <p>A: 画面上部の「最新データ取得」ボタンをタップしてください。</p>
+                        <p>A: 画面上部の「最新データ取得」ボタンをタップしてください。AWS S3から最新データが取得されます。</p>
                     </div>
                     <div class="help-section">
                         <h4>Q: カップ名を変更したい</h4>
                         <p>A: 「各賞・ルール」画面の「カップ名設定」でカップ名を変更できます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: ハンディキャップはどう計算されるの？</h4>
+                        <p>A: WHS（ワールドハンディキャップシステム）により、直近20ラウンドのベスト8から自動計算されます。スコアを保存すると自動更新されます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: パーオン率はどう入力するの？</h4>
+                        <p>A: パーオン率を%（パーセント）で入力してください（例: 66.7）。3回以上参加した人のみランキングに表示されます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: 昨年度のデータを見たい</h4>
+                        <p>A: 画面上部の年度選択で切り替えられます。年度ごとにデータが管理されています。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: ホールインワンやイーグルはどう記録するの？</h4>
+                        <p>A: 「一括入力」画面の「特別記録」セクションで、ホールインワン、イーグル、アルバトロスを記録できます。</p>
                     </div>
                 </div>
             </section>

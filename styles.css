@@ -675,12 +675,13 @@ main {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .special-input .form-group label {
     margin-bottom: 0;
-    min-width: 100px;
+    min-width: 110px;
+    white-space: nowrap;
 }
 
 .special-input select,
