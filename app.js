@@ -1071,43 +1071,31 @@ function updateParOnRanking(rounds) {
             return { user, isValid: false };
         }
 
-        // Par3/Par4/Par5それぞれの平均を計算
-        const par3Rates = userRounds.map(r => r.scores[user].parOn?.par3).filter(v => v !== undefined && !isNaN(v));
-        const par4Rates = userRounds.map(r => r.scores[user].parOn?.par4).filter(v => v !== undefined && !isNaN(v));
-        const par5Rates = userRounds.map(r => r.scores[user].parOn?.par5).filter(v => v !== undefined && !isNaN(v));
-
-        const avgPar3 = par3Rates.length > 0 ? par3Rates.reduce((a, b) => a + b, 0) / par3Rates.length : null;
-        const avgPar4 = par4Rates.length > 0 ? par4Rates.reduce((a, b) => a + b, 0) / par4Rates.length : null;
-        const avgPar5 = par5Rates.length > 0 ? par5Rates.reduce((a, b) => a + b, 0) / par5Rates.length : null;
-
-        // 総合パーオン率を計算
-        const totalRates = userRounds.map(r => calculateTotalParOnRate(r.scores[user].parOn)).filter(r => r !== null);
-        const avgTotal = totalRates.length > 0 ? totalRates.reduce((a, b) => a + b, 0) / totalRates.length : null;
+        // パーオン率の平均を計算（統合率のみ）
+        const parOnRates = userRounds.map(r => r.scores[user].parOn).filter(v => v !== undefined && !isNaN(v));
+        const avgRate = parOnRates.length > 0 ? parOnRates.reduce((a, b) => a + b, 0) / parOnRates.length : null;
 
         return {
             user,
             rounds: userRounds.length,
-            par3: avgPar3,
-            par4: avgPar4,
-            par5: avgPar5,
-            total: avgTotal,
-            isValid: avgTotal !== null
+            rate: avgRate,
+            isValid: avgRate !== null
         };
     }).filter(r => r.isValid)
-      .sort((a, b) => b.total - a.total); // 総合で降順
+      .sort((a, b) => b.rate - a.rate); // 降順
 
     let currentRank = 1;
     let prevRate = null;
     rankings.forEach((r, i) => {
-        if (prevRate !== null && r.total.toFixed(1) !== prevRate.toFixed(1)) {
+        if (prevRate !== null && r.rate.toFixed(1) !== prevRate.toFixed(1)) {
             currentRank = i + 1;
         }
         r.rank = currentRank;
-        prevRate = r.total;
+        prevRate = r.rate;
     });
 
     if (rankings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="no-data">データが不足しています</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">データが不足しています</td></tr>';
         return;
     }
 
@@ -1115,10 +1103,7 @@ function updateParOnRanking(rounds) {
         <tr class="${r.rank === 1 ? 'rank-1' : ''}">
             <td>${r.rank}</td>
             <td>${r.user}</td>
-            <td>${r.par3 !== null ? r.par3.toFixed(1) + '%' : '-'}</td>
-            <td>${r.par4 !== null ? r.par4.toFixed(1) + '%' : '-'}</td>
-            <td>${r.par5 !== null ? r.par5.toFixed(1) + '%' : '-'}</td>
-            <td><strong>${r.total.toFixed(1)}%</strong></td>
+            <td><strong>${r.rate.toFixed(1)}%</strong></td>
             <td>${r.rounds}回</td>
         </tr>
     `).join('');
@@ -1299,17 +1284,13 @@ function setupInputForm() {
 
         container.innerHTML = USERS.map(user => {
             const scoreData = round.scores[user] || {};
-            const parOn = scoreData.parOn || {};
+            const parOnRate = scoreData.parOn || '';
             return `
                 <div class="score-input-item">
                     <label>${user}</label>
                     <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric" value="${scoreData.score || ''}">
                     <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric" value="${scoreData.putt || ''}">
-                    <div class="paron-bulk-inputs">
-                        <input type="number" id="paron-par3-${user}" placeholder="Par3" min="0" max="100" step="0.1" inputmode="decimal" value="${parOn.par3 || ''}">
-                        <input type="number" id="paron-par4-${user}" placeholder="Par4" min="0" max="100" step="0.1" inputmode="decimal" value="${parOn.par4 || ''}">
-                        <input type="number" id="paron-par5-${user}" placeholder="Par5" min="0" max="100" step="0.1" inputmode="decimal" value="${parOn.par5 || ''}">
-                    </div>
+                    <input type="number" id="paron-${user}" placeholder="パーオン率(%)" min="0" max="100" step="0.1" inputmode="decimal" value="${parOnRate}">
                 </div>
             `;
         }).join('');
@@ -1330,11 +1311,7 @@ function setupInputForm() {
                 <label>${user}</label>
                 <input type="number" id="score-${user}" placeholder="スコア" min="50" max="200" inputmode="numeric">
                 <input type="number" id="putt-${user}" placeholder="パット" min="10" max="80" inputmode="numeric">
-                <div class="paron-bulk-inputs">
-                    <input type="number" id="paron-par3-${user}" placeholder="Par3" min="0" max="100" step="0.1" inputmode="decimal">
-                    <input type="number" id="paron-par4-${user}" placeholder="Par4" min="0" max="100" step="0.1" inputmode="decimal">
-                    <input type="number" id="paron-par5-${user}" placeholder="Par5" min="0" max="100" step="0.1" inputmode="decimal">
-                </div>
+                <input type="number" id="paron-${user}" placeholder="パーオン率(%)" min="0" max="100" step="0.1" inputmode="decimal">
             </div>
         `).join('');
 
@@ -1406,9 +1383,8 @@ async function saveMyScore() {
     const course = document.getElementById('my-input-course').value;
     const score = parseInt(document.getElementById('my-input-score').value);
     const putt = parseInt(document.getElementById('my-input-putt').value);
-    const parOnPar3 = parseFloat(document.getElementById('my-input-paron-par3').value);
-    const parOnPar4 = parseFloat(document.getElementById('my-input-paron-par4').value);
-    const parOnPar5 = parseFloat(document.getElementById('my-input-paron-par5').value);
+    const parOnInput = document.getElementById('my-input-paron').value;
+    const parOn = parOnInput === '' ? 0.0 : parseFloat(parOnInput);
     const selectedYear = parseInt(document.getElementById('my-input-year').value);
 
     if (!date || !course) {
@@ -1420,12 +1396,6 @@ async function saveMyScore() {
         alert('スコアを入力してください');
         return;
     }
-
-    // パーオン率オブジェクトを作成
-    const parOn = {};
-    if (!isNaN(parOnPar3)) parOn.par3 = parOnPar3;
-    if (!isNaN(parOnPar4)) parOn.par4 = parOnPar4;
-    if (!isNaN(parOnPar5)) parOn.par5 = parOnPar5;
 
     // 年度データがなければ作成
     if (!appState.yearData[selectedYear]) {
@@ -1443,7 +1413,7 @@ async function saveMyScore() {
     if (existingRound) {
         existingRound.scores[user] = { score };
         if (putt) existingRound.scores[user].putt = putt;
-        if (Object.keys(parOn).length > 0) existingRound.scores[user].parOn = parOn;
+        if (!isNaN(parOn)) existingRound.scores[user].parOn = parOn;
     } else {
         const roundNumber = yearData.rounds.length + 1;
         const newRound = {
@@ -1455,7 +1425,7 @@ async function saveMyScore() {
             }
         };
         if (putt) newRound.scores[user].putt = putt;
-        if (Object.keys(parOn).length > 0) newRound.scores[user].parOn = parOn;
+        if (!isNaN(parOn)) newRound.scores[user].parOn = parOn;
         yearData.rounds.push(newRound);
     }
 
@@ -1464,9 +1434,7 @@ async function saveMyScore() {
     document.getElementById('my-input-course').value = '';
     document.getElementById('my-input-score').value = '';
     document.getElementById('my-input-putt').value = '';
-    document.getElementById('my-input-paron-par3').value = '';
-    document.getElementById('my-input-paron-par4').value = '';
-    document.getElementById('my-input-paron-par5').value = '';
+    document.getElementById('my-input-paron').value = '';
 
     updateAllViews();
 }
@@ -1539,20 +1507,13 @@ async function saveScore() {
     USERS.forEach(user => {
         const score = parseInt(document.getElementById(`score-${user}`).value);
         const putt = parseInt(document.getElementById(`putt-${user}`).value);
-        const parOnPar3 = parseFloat(document.getElementById(`paron-par3-${user}`)?.value);
-        const parOnPar4 = parseFloat(document.getElementById(`paron-par4-${user}`)?.value);
-        const parOnPar5 = parseFloat(document.getElementById(`paron-par5-${user}`)?.value);
+        const parOnInput = document.getElementById(`paron-${user}`)?.value || '';
+        const parOn = parOnInput === '' ? 0.0 : parseFloat(parOnInput);
 
         if (score) {
             scores[user] = { score };
             if (putt) scores[user].putt = putt;
-
-            // パーオン率オブジェクトを作成
-            const parOn = {};
-            if (!isNaN(parOnPar3)) parOn.par3 = parOnPar3;
-            if (!isNaN(parOnPar4)) parOn.par4 = parOnPar4;
-            if (!isNaN(parOnPar5)) parOn.par5 = parOnPar5;
-            if (Object.keys(parOn).length > 0) scores[user].parOn = parOn;
+            if (!isNaN(parOn)) scores[user].parOn = parOn;
 
             hasAnyScore = true;
         }
@@ -2032,10 +1993,10 @@ function getBestParOnRate(rounds) {
     validUsers.forEach(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].parOn !== undefined);
         if (userRounds.length >= 1) {
-            // 各ラウンドの総合パーオン率を計算して平均
-            const totalRates = userRounds.map(r => calculateTotalParOnRate(r.scores[user].parOn)).filter(r => r !== null);
-            if (totalRates.length >= 1) {
-                const avgRate = totalRates.reduce((a, b) => a + b, 0) / totalRates.length;
+            // パーオン率の平均を計算（統合率のみ）
+            const parOnRates = userRounds.map(r => r.scores[user].parOn).filter(r => r !== undefined && !isNaN(r));
+            if (parOnRates.length >= 1) {
+                const avgRate = parOnRates.reduce((a, b) => a + b, 0) / parOnRates.length;
 
                 if (best.rate === null || avgRate > best.rate) {
                     best.rate = avgRate;

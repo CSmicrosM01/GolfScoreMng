@@ -245,16 +245,13 @@
 
                     <div class="card">
                         <h3>パーオン率ランキング⭐️</h3>
-                        <p class="note">※3回以上参加者のみ（Par3:4H, Par4:10H, Par5:4Hの重み付け平均）</p>
+                        <p class="note">※3回以上参加者のみ</p>
                         <table class="ranking-table" id="paron-ranking">
                             <thead>
                                 <tr>
                                     <th>順位</th>
                                     <th>名前</th>
-                                    <th>Par3</th>
-                                    <th>Par4</th>
-                                    <th>Par5</th>
-                                    <th>総合</th>
+                                    <th>パーオン率</th>
                                     <th>回数</th>
                                 </tr>
                             </thead>
@@ -353,22 +350,9 @@
                             <label for="my-input-putt">パット数:</label>
                             <input type="number" id="my-input-putt" placeholder="例: 36" min="10" max="80" inputmode="numeric">
                         </div>
-                        <div class="form-group paron-group">
-                            <label>パーオン率(%):</label>
-                            <div class="paron-inputs">
-                                <div class="paron-input-item">
-                                    <span>Par3</span>
-                                    <input type="number" id="my-input-paron-par3" placeholder="0" min="0" max="100" step="0.1" inputmode="decimal">
-                                </div>
-                                <div class="paron-input-item">
-                                    <span>Par4</span>
-                                    <input type="number" id="my-input-paron-par4" placeholder="0" min="0" max="100" step="0.1" inputmode="decimal">
-                                </div>
-                                <div class="paron-input-item">
-                                    <span>Par5</span>
-                                    <input type="number" id="my-input-paron-par5" placeholder="0" min="0" max="100" step="0.1" inputmode="decimal">
-                                </div>
-                            </div>
+                        <div class="form-group">
+                            <label for="my-input-paron">パーオン率(%):</label>
+                            <input type="number" id="my-input-paron" placeholder="0" min="0" max="100" step="0.1" inputmode="decimal">
                         </div>
                     </div>
 
@@ -591,9 +575,9 @@
                     <div class="help-section">
                         <h4>2. スコアの入力方法</h4>
                         <ul class="rules-list">
-                            <li><strong>スコア入力</strong>: 自分のスコア、パット数、パーオン率（Par3/Par4/Par5別、%）を簡単に入力できます</li>
-                            <li><strong>一括入力</strong>: 全員のスコア、パット数、パーオン率（Par3/Par4/Par5別、%）をまとめて入力できます（幹事向け）</li>
-                            <li>パーオン率は楽天ゴルフスコアに表示されるPar3/Par4/Par5それぞれの値を入力してください</li>
+                            <li><strong>スコア入力</strong>: 自分のスコア、パット数、パーオン率（%）を簡単に入力できます</li>
+                            <li><strong>一括入力</strong>: 全員のスコア、パット数、パーオン率（%）をまとめて入力できます（幹事向け）</li>
+                            <li>パーオン率はスコアアプリに表示される統合パーオン率を入力してください</li>
                             <li>ホールインワン、イーグル、アルバトロスは一括入力画面で記録できます</li>
                         </ul>
                     </div>
@@ -709,7 +693,7 @@
                     </div>
                     <div class="help-section">
                         <h4>Q: パーオン率はどう入力するの？</h4>
-                        <p>A: 楽天ゴルフスコアに表示されるPar3/Par4/Par5それぞれのパーオン率（%）を入力してください。総合パーオン率は自動計算されます（Par3:4H、Par4:10H、Par5:4Hの重み付け平均）。3回以上参加した人のみランキングに表示されます。</p>
+                        <p>A: スコアアプリに表示される統合パーオン率（%）を入力してください。コースごとのパーオン情報を考慮した値をアプリで管理しているため、その統合率を使用します。3回以上参加した人のみランキングに表示されます。</p>
                     </div>
                     <div class="help-section">
                         <h4>Q: 昨年度のデータを見たい</h4>
