@@ -22,6 +22,8 @@ let appState = {
     yearData: {},           // 年度別データのキャッシュ { 2025: {...}, 2026: {...} }
     editingRound: null,     // 編集中のラウンドのインデックス
     editingYear: null,      // 編集中のラウンドの年度
+    editingOriginalDate: null,    // 編集中のラウンドの元の日付
+    editingOriginalCourse: null,  // 編集中のラウンドの元のコース名
     lastSyncTime: null,     // 最終同期時刻
     showNetScore: true      // true: ネット（HC適用）, false: グロス
 };
@@ -345,10 +347,19 @@ async function saveYearData(year, options = {}) {
 
     // Lambda同期が有効な場合
     if (USE_LAMBDA_SYNC && LAMBDA_FUNCTION_URL) {
+        // データを準備
+        let dataToSend = { ...yearData };
+
         // replaceMode: 削除操作時はマージせず上書き
-        const dataToSend = options.replaceMode
-            ? { ...yearData, replaceMode: true }
-            : yearData;
+        if (options.replaceMode) {
+            dataToSend.replaceMode = true;
+        }
+
+        // deleteRound: コース名変更時に元のラウンドを削除
+        if (options.deleteRound) {
+            dataToSend.deleteRound = options.deleteRound;
+        }
+
         const success = await saveYearDataToLambda(year, dataToSend);
         if (success) {
             showSaveSuccessNotification();
@@ -678,6 +689,8 @@ async function login(user) {
 function logout() {
     appState.currentUser = null;
     appState.editingRound = null;
+    appState.editingOriginalDate = null;
+    appState.editingOriginalCourse = null;
     document.getElementById('main-screen').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
 }
@@ -1459,12 +1472,22 @@ function updateCourseDatalist() {
 function resetInputForm() {
     appState.editingRound = null;
     appState.editingYear = null;
+    appState.editingOriginalDate = null;
+    appState.editingOriginalCourse = null;
     setupInputForm();
 }
 
 function editRound(index, year) {
     appState.editingRound = index;
     appState.editingYear = parseInt(year) || appState.currentYear;
+
+    // 編集前の日付とコース名を記録（コース名変更時の対応用）
+    const yearData = appState.yearData[appState.editingYear];
+    if (yearData && yearData.rounds[index]) {
+        appState.editingOriginalDate = yearData.rounds[index].date;
+        appState.editingOriginalCourse = yearData.rounds[index].course;
+    }
+
     switchTab('bulk-input');
 }
 
@@ -1487,6 +1510,8 @@ async function deleteRound() {
     await saveYearData(year, { replaceMode: true });
     appState.editingRound = null;
     appState.editingYear = null;
+    appState.editingOriginalDate = null;
+    appState.editingOriginalCourse = null;
     updateAllViews();
     switchTab('scores');
 }
@@ -1596,10 +1621,22 @@ async function saveScore() {
         });
     }
 
-    await saveYearData(year);
+    // 編集モードで日付またはコース名が変更された場合、元のラウンドを削除対象として指定
+    const options = {};
+    if (appState.editingRound !== null) {
+        const originalDate = appState.editingOriginalDate;
+        const originalCourse = appState.editingOriginalCourse;
+        if (originalDate && originalCourse && (originalDate !== date || originalCourse !== course)) {
+            // 日付またはコース名が変更された場合、元のラウンドを削除
+            options.deleteRound = { date: originalDate, course: originalCourse };
+        }
+    }
+    await saveYearData(year, options);
 
     appState.editingRound = null;
     appState.editingYear = null;
+    appState.editingOriginalDate = null;
+    appState.editingOriginalCourse = null;
     document.getElementById('input-course').value = '';
     document.getElementById('input-year').disabled = false;
     USERS.forEach(user => {

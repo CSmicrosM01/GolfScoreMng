@@ -226,10 +226,26 @@ async function getYearData(year) {
 // 年度別データを保存（既存データとマージ）
 async function saveYearData(year, newData) {
     // 既存データを取得
-    const existingData = await getYearData(year);
+    let existingData = await getYearData(year);
+
+    // deleteRound が指定されている場合、既存データから該当ラウンドを削除
+    // （コース名変更時に古いラウンドが残らないようにする）
+    if (newData.deleteRound) {
+        const { date, course } = newData.deleteRound;
+        if (existingData.rounds) {
+            existingData.rounds = existingData.rounds.filter(
+                r => !(r.date === date && r.course === course)
+            );
+        }
+        console.log(`削除対象ラウンド: ${date}_${course}`);
+    }
+
+    // deleteRound プロパティを除去してからマージ
+    const dataToMerge = { ...newData };
+    delete dataToMerge.deleteRound;
 
     // データをマージ
-    const mergedData = mergeYearData(existingData, newData);
+    const mergedData = mergeYearData(existingData, dataToMerge);
 
     const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
