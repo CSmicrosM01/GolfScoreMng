@@ -635,20 +635,20 @@ function updateLoginStats() {
         }
     }
 
-    // ベストスコア
+    // ベストスコア（同率一位の場合は全員表示）
     const bestScore = getBestScore(rounds);
     document.getElementById('login-best-score').textContent = bestScore.score || '-';
-    document.getElementById('login-best-score-holder').textContent = bestScore.user ? withSan(bestScore.user) : '-';
+    document.getElementById('login-best-score-holder').textContent = bestScore.users.length > 0 ? bestScore.users.map(u => withSan(u)).join(', ') : '-';
 
-    // ベストパット平均
+    // ベストパット平均（同率一位の場合は全員表示）
     const bestPutt = getBestPuttAverage(rounds);
     document.getElementById('login-best-putt').textContent = bestPutt.average ? bestPutt.average.toFixed(2) : '-';
-    document.getElementById('login-best-putt-holder').textContent = bestPutt.user ? withSan(bestPutt.user) : '-';
+    document.getElementById('login-best-putt-holder').textContent = bestPutt.users.length > 0 ? bestPutt.users.map(u => withSan(u)).join(', ') : '-';
 
-    // パーオン率ベスト
+    // パーオン率ベスト（同率一位の場合は全員表示）
     const bestParOn = getBestParOnRate(rounds);
     document.getElementById('login-best-paron').textContent = bestParOn.rate ? bestParOn.rate.toFixed(1) + '%' : '-';
-    document.getElementById('login-best-paron-holder').textContent = bestParOn.user ? withSan(bestParOn.user) : '-';
+    document.getElementById('login-best-paron-holder').textContent = bestParOn.users.length > 0 ? bestParOn.users.map(u => withSan(u)).join(', ') : '-';
 
     // 誤差ベスト（平均スコア変化）
     const bestImprovement = getBestScoreChange();
@@ -778,15 +778,15 @@ function updateDashboard() {
 
     const bestScore = getBestScore(yearData.rounds);
     document.getElementById('best-score-value').textContent = bestScore.score || '-';
-    document.getElementById('best-score-holder').textContent = bestScore.user ? withSan(bestScore.user) : '-';
+    document.getElementById('best-score-holder').textContent = bestScore.users.length > 0 ? bestScore.users.map(u => withSan(u)).join(', ') : '-';
 
     const bestPutt = getBestPuttAverage(yearData.rounds);
     document.getElementById('best-putt-value').textContent = bestPutt.average ? bestPutt.average.toFixed(2) : '-';
-    document.getElementById('best-putt-holder').textContent = bestPutt.user ? withSan(bestPutt.user) : '-';
+    document.getElementById('best-putt-holder').textContent = bestPutt.users.length > 0 ? bestPutt.users.map(u => withSan(u)).join(', ') : '-';
 
     const bestParOn = getBestParOnRate(yearData.rounds);
     document.getElementById('best-paron-value').textContent = bestParOn.rate ? bestParOn.rate.toFixed(1) + '%' : '-';
-    document.getElementById('best-paron-holder').textContent = bestParOn.user ? withSan(bestParOn.user) : '-';
+    document.getElementById('best-paron-holder').textContent = bestParOn.users.length > 0 ? bestParOn.users.map(u => withSan(u)).join(', ') : '-';
 
     updateMyStats(yearData.rounds);
     updateSpecialAchievements(yearData);
@@ -1454,9 +1454,6 @@ async function saveMyScore() {
 
 // ===== コースリスト更新 =====
 function updateCourseDatalist() {
-    const datalist = document.getElementById('course-list');
-    if (!datalist) return;
-
     const courses = new Set();
     Object.values(appState.yearData).forEach(yearData => {
         if (yearData.rounds) {
@@ -1466,7 +1463,50 @@ function updateCourseDatalist() {
         }
     });
 
-    datalist.innerHTML = [...courses].sort().map(c => `<option value="${c}">`).join('');
+    const sortedCourses = [...courses].sort();
+
+    // datalist更新（後方互換）
+    const datalist = document.getElementById('course-list');
+    if (datalist) {
+        datalist.innerHTML = sortedCourses.map(c => `<option value="${c}">`).join('');
+    }
+
+    // コース選択ドロップダウンを更新
+    const courseOptions = '<option value=""></option>' +
+        sortedCourses.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    const bulkSelect = document.getElementById('input-course-select');
+    if (bulkSelect) {
+        bulkSelect.innerHTML = courseOptions;
+    }
+
+    const mySelect = document.getElementById('my-input-course-select');
+    if (mySelect) {
+        mySelect.innerHTML = courseOptions;
+    }
+
+    // コース選択ドロップダウンのイベントリスナーを設定
+    setupCourseSelectListener('input-course-select', 'input-course');
+    setupCourseSelectListener('my-input-course-select', 'my-input-course');
+}
+
+// コース選択ドロップダウンから選択時にテキスト入力にセットする
+function setupCourseSelectListener(selectId, inputId) {
+    const select = document.getElementById(selectId);
+    const input = document.getElementById(inputId);
+    if (!select || !input) return;
+
+    // 重複登録防止
+    if (select.hasAttribute('data-listener-added')) return;
+    select.setAttribute('data-listener-added', 'true');
+
+    select.addEventListener('change', () => {
+        if (select.value) {
+            input.value = select.value;
+        }
+        // 選択後にselectをリセット（次回も選択可能にする）
+        select.value = '';
+    });
 }
 
 function resetInputForm() {
@@ -1940,7 +1980,8 @@ function getParticipationCounts(rounds) {
 
 function getBestScore(rounds) {
     const validRounds = rounds.filter(r => countParticipants(r) >= MIN_PARTICIPANTS);
-    let best = { score: null, user: null };
+    let bestScore = null;
+    let bestUsers = [];
 
     const participationCounts = getParticipationCounts(rounds);
     const validUsers = USERS.filter(u => participationCounts[u] >= 1);
@@ -1948,15 +1989,18 @@ function getBestScore(rounds) {
     validRounds.forEach(round => {
         validUsers.forEach(user => {
             if (round.scores[user] && round.scores[user].score) {
-                if (best.score === null || round.scores[user].score < best.score) {
-                    best.score = round.scores[user].score;
-                    best.user = user;
+                const score = round.scores[user].score;
+                if (bestScore === null || score < bestScore) {
+                    bestScore = score;
+                    bestUsers = [user];
+                } else if (score === bestScore && !bestUsers.includes(user)) {
+                    bestUsers.push(user);
                 }
             }
         });
     });
 
-    return best;
+    return { score: bestScore, user: bestUsers[0] || null, users: bestUsers };
 }
 
 function getBestPuttAverage(rounds) {
@@ -1965,7 +2009,8 @@ function getBestPuttAverage(rounds) {
     const participationCounts = getParticipationCounts(rounds);
     const validUsers = USERS.filter(u => participationCounts[u] >= 1);
 
-    let best = { average: null, user: null };
+    let bestAvg = null;
+    let bestUsers = [];
 
     validUsers.forEach(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].putt);
@@ -1973,14 +2018,17 @@ function getBestPuttAverage(rounds) {
             const putts = userRounds.map(r => r.scores[user].putt);
             const avg = putts.reduce((a, b) => a + b, 0) / putts.length;
 
-            if (best.average === null || avg < best.average) {
-                best.average = avg;
-                best.user = user;
+            if (bestAvg === null || avg < bestAvg) {
+                // 表示精度(小数点2桁)で比較して更新
+                bestAvg = avg;
+                bestUsers = [user];
+            } else if (bestAvg !== null && avg.toFixed(2) === bestAvg.toFixed(2)) {
+                bestUsers.push(user);
             }
         }
     });
 
-    return best;
+    return { average: bestAvg, user: bestUsers[0] || null, users: bestUsers };
 }
 
 // 総合パーオン率を計算（Par3:4H, Par4:10H, Par5:4Hの重み付け平均）
@@ -2025,7 +2073,8 @@ function getBestParOnRate(rounds) {
     const participationCounts = getParticipationCounts(rounds);
     const validUsers = USERS.filter(u => participationCounts[u] >= 1);
 
-    let best = { rate: null, user: null };
+    let bestRate = null;
+    let bestUsers = [];
 
     validUsers.forEach(user => {
         const userRounds = validRounds.filter(r => r.scores[user] && r.scores[user].parOn !== undefined);
@@ -2035,15 +2084,18 @@ function getBestParOnRate(rounds) {
             if (parOnRates.length >= 1) {
                 const avgRate = parOnRates.reduce((a, b) => a + b, 0) / parOnRates.length;
 
-                if (best.rate === null || avgRate > best.rate) {
-                    best.rate = avgRate;
-                    best.user = user;
+                if (bestRate === null || avgRate > bestRate) {
+                    // 表示精度(小数点1桁)で比較して更新
+                    bestRate = avgRate;
+                    bestUsers = [user];
+                } else if (bestRate !== null && avgRate.toFixed(1) === bestRate.toFixed(1)) {
+                    bestUsers.push(user);
                 }
             }
         }
     });
 
-    return best;
+    return { rate: bestRate, user: bestUsers[0] || null, users: bestUsers };
 }
 
 function getBestScoreChange() {

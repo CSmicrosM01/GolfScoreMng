@@ -27,6 +27,7 @@ body {
     background-color: var(--background);
     color: var(--text-primary);
     line-height: 1.6;
+    overflow-x: hidden;
 }
 
 /* スクリーン制御 */
@@ -556,6 +557,7 @@ main {
 
 .table-container {
     overflow-x: auto;
+    max-width: 100%;
 }
 
 .scores-table {
@@ -608,6 +610,51 @@ main {
     color: var(--text-secondary);
 }
 
+/* コース選択ドロップダウン */
+.course-input-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    max-width: 300px;
+}
+
+.course-input-wrapper input[type="text"] {
+    width: 100%;
+    max-width: none;
+    padding-right: 35px;
+}
+
+.course-select-arrow {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--border-color);
+    border-radius: 0 8px 8px 0;
+    background: var(--background);
+    color: var(--text-secondary);
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.course-input-wrapper .course-select-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 35px;
+    padding: 0;
+    border: none;
+    border-radius: 0 8px 8px 0;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0;
+}
+
 /* スコア入力 */
 .form-group {
     margin-bottom: 1rem;
@@ -622,7 +669,7 @@ main {
 .form-group input[type="date"],
 .form-group input[type="text"],
 .form-group input[type="number"],
-.form-group select {
+.form-group select:not(.course-select-btn) {
     padding: 0.75rem;
     border: 2px solid var(--border-color);
     border-radius: 8px;
@@ -632,7 +679,7 @@ main {
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:not(.course-select-btn):focus {
     border-color: var(--primary-color);
     outline: none;
 }
@@ -1181,12 +1228,27 @@ main {
         font-size: 0.75rem;
     }
 
-    /* フォーム */
-    .form-group input[type="date"],
+    /* コース選択ドロップダウン */
+    .course-input-wrapper {
+        max-width: 100%;
+    }
+
+    .course-input-wrapper .course-select-btn {
+        width: 35px;
+        opacity: 0;
+    }
+
+    /* フォーム - モバイルではすべての入力要素を親幅内に収める */
     .form-group input[type="text"],
     .form-group input[type="number"],
-    .form-group select {
+    .form-group select:not(.course-select-btn) {
+        width: 100%;
         max-width: 100%;
+        font-size: 16px; /* iOSズーム防止 */
+    }
+
+    /* 日付入力はデスクトップと同じmax-width: 300pxを維持（年度selectと同幅） */
+    .form-group input[type="date"] {
         font-size: 16px; /* iOSズーム防止 */
     }
 

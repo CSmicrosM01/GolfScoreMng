@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ゴルフスコア管理</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260216b">
 </head>
 <body>
     <!-- ログイン画面 -->
@@ -337,7 +337,13 @@
                     </div>
                     <div class="form-group">
                         <label for="my-input-course">コース:</label>
-                        <input type="text" id="my-input-course" placeholder="コース名を入力" list="course-list">
+                        <div class="course-input-wrapper">
+                            <input type="text" id="my-input-course" placeholder="コース名を入力">
+                            <span class="course-select-arrow">&#9662;</span>
+                            <select id="my-input-course-select" class="course-select-btn">
+                                <option value=""></option>
+                            </select>
+                        </div>
                         <datalist id="course-list"></datalist>
                     </div>
 
@@ -386,7 +392,13 @@
                     </div>
                     <div class="form-group">
                         <label for="input-course">コース:</label>
-                        <input type="text" id="input-course" placeholder="コース名を入力">
+                        <div class="course-input-wrapper">
+                            <input type="text" id="input-course" placeholder="コース名を入力">
+                            <span class="course-select-arrow">&#9662;</span>
+                            <select id="input-course-select" class="course-select-btn">
+                                <option value=""></option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -708,7 +720,7 @@
         </main>
     </div>
 
-    <script src="data.js"></script>
-    <script src="app.js"></script>
+    <script src="data.js?v=20260216b"></script>
+    <script src="app.js?v=20260216b"></script>
 </body>
 </html>
