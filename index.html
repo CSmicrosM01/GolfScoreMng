@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ゴルフスコア管理</title>
-    <link rel="stylesheet" href="styles.css?v=20260216b">
+    <link rel="stylesheet" href="styles.css?v=20260306">
 </head>
 <body>
     <!-- ログイン画面 -->
@@ -488,6 +488,16 @@
                 </div>
 
                 <div class="card">
+                    <h3>コース名管理</h3>
+                    <p class="help-text">スコア入力時にドロップダウンに表示されるコース名を管理できます。スコアデータに含まれるコース名は自動的に表示されます。</p>
+                    <div class="course-manage-input-group">
+                        <input type="text" id="course-name-input" placeholder="コース名を入力" maxlength="30">
+                        <button id="add-course-name-btn" class="btn-primary">追加</button>
+                    </div>
+                    <div id="course-name-list" class="course-name-list"></div>
+                </div>
+
+                <div class="card">
                     <h3>開催・参加条件</h3>
                     <ul class="rules-list">
                         <li>ラウンド参加人数が<strong>3名以上</strong>であること</li>
@@ -720,7 +730,7 @@
         </main>
     </div>
 
-    <script src="data.js?v=20260216b"></script>
-    <script src="app.js?v=20260216b"></script>
+    <script src="data.js?v=20260306"></script>
+    <script src="app.js?v=20260306"></script>
 </body>
 </html>

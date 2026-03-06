@@ -185,7 +185,8 @@ function getDefaultConfig() {
         },
         courses: {
             "default": { "rating": 72.0, "slope": 113, "par": 72 }
-        }
+        },
+        courseNames: []
     };
 }
 
@@ -719,6 +720,7 @@ function setupEventListeners() {
     document.getElementById('delete-score-btn').addEventListener('click', deleteRound);
     document.getElementById('save-my-score-btn').addEventListener('click', saveMyScore);
     document.getElementById('save-cup-name-btn').addEventListener('click', saveCupName);
+    document.getElementById('add-course-name-btn').addEventListener('click', addCourseName);
     document.getElementById('update-handicap-btn').addEventListener('click', updateAndSaveHandicaps);
 
     document.getElementById('export-btn').addEventListener('click', exportData);
@@ -760,6 +762,7 @@ function updateAllViews() {
     setupInputForm();
     setupMyInputForm();
     setupCupNameSettings();
+    renderCourseNameList();
     updateFilters();
     updateCourseDatalist();
 }
@@ -1463,6 +1466,11 @@ function updateCourseDatalist() {
         }
     });
 
+    // 手動追加されたコース名をマージ
+    if (appState.config && appState.config.courseNames) {
+        appState.config.courseNames.forEach(name => courses.add(name));
+    }
+
     const sortedCourses = [...courses].sort();
 
     // datalist更新（後方互換）
@@ -1846,6 +1854,87 @@ async function saveCupName() {
         console.error('カップ名保存エラー:', error);
         alert('カップ名の保存に失敗しました');
     }
+}
+
+// ===== コース名管理 =====
+async function addCourseName() {
+    const input = document.getElementById('course-name-input');
+    const courseName = input.value.trim();
+
+    if (!courseName) {
+        alert('コース名を入力してください');
+        return;
+    }
+
+    if (!appState.config.courseNames) {
+        appState.config.courseNames = [];
+    }
+
+    if (appState.config.courseNames.includes(courseName)) {
+        alert('このコース名は既に登録されています');
+        return;
+    }
+
+    appState.config.courseNames = [...appState.config.courseNames, courseName].sort();
+
+    try {
+        await saveConfig();
+        input.value = '';
+        renderCourseNameList();
+        updateCourseDatalist();
+        alert('コース名を追加しました');
+    } catch (error) {
+        console.error('コース名追加エラー:', error);
+        alert('コース名の追加に失敗しました');
+    }
+}
+
+async function deleteCourseName(courseName) {
+    if (!confirm(`コース「${courseName}」を削除しますか？\n\n※スコアデータに存在するコースはドロップダウンに引き続き表示されます。`)) {
+        return;
+    }
+
+    appState.config.courseNames = appState.config.courseNames.filter(c => c !== courseName);
+
+    try {
+        await saveConfig();
+        renderCourseNameList();
+        updateCourseDatalist();
+    } catch (error) {
+        console.error('コース名削除エラー:', error);
+        alert('コース名の削除に失敗しました');
+    }
+}
+
+function renderCourseNameList() {
+    const container = document.getElementById('course-name-list');
+    if (!container) return;
+
+    const courseNames = appState.config.courseNames || [];
+
+    if (courseNames.length === 0) {
+        container.innerHTML = '<p class="no-data">手動追加されたコースはありません</p>';
+        return;
+    }
+
+    container.innerHTML = courseNames.map(name =>
+        `<div class="course-name-item">
+            <span class="course-name-text">${escapeHtml(name)}</span>
+            <button class="btn-delete-course" data-course="${escapeHtml(name)}">削除</button>
+        </div>`
+    ).join('');
+
+    container.querySelectorAll('.btn-delete-course').forEach(btn => {
+        btn.addEventListener('click', () => {
+            deleteCourseName(btn.dataset.course);
+        });
+    });
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 // ===== ハンディキャップ更新 =====

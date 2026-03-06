@@ -966,6 +966,68 @@ main {
     white-space: nowrap;
 }
 
+/* コース名管理 */
+.course-manage-input-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.course-manage-input-group input {
+    flex: 1;
+    min-width: 150px;
+    max-width: 300px;
+    padding: 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.course-manage-input-group input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.course-manage-input-group .btn-primary {
+    white-space: nowrap;
+}
+
+.course-name-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.course-name-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--background);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.course-name-text {
+    font-weight: 500;
+}
+
+.btn-delete-course {
+    padding: 0.3rem 0.8rem;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.btn-delete-course:hover {
+    background: #b71c1c;
+}
+
 /* ハンディキャップ設定 */
 .handicap-settings {
     display: grid;
@@ -1236,6 +1298,12 @@ main {
     .course-input-wrapper .course-select-btn {
         width: 35px;
         opacity: 0;
+    }
+
+    /* コース名管理 */
+    .course-manage-input-group input {
+        max-width: 100%;
+        font-size: 16px;
     }
 
     /* フォーム - モバイルではすべての入力要素を親幅内に収める */
