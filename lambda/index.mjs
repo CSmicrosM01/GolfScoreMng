@@ -6,6 +6,40 @@ const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const BUCKET_NAME = process.env.BUCKET_NAME;
 const CONFIG_FILE_KEY = 'config.json';
 
+// グループ別データ分離: group パラメータ指定時は S3 キーに「{group}/」プレフィックスを付け、
+// 既存データ(バケット直下)と競合しない別ファイルを読み書きする。
+// 例: group=kondo → kondo/config.json, kondo/data-2026.json
+// group 未指定時は従来どおり(後方互換)。
+const GROUP_NAME_PATTERN = /^[a-z0-9-]{1,20}$/;
+
+// グループ別のデフォルト設定(データファイル未作成時の初期値)
+const GROUP_DEFAULTS = {
+    '': {
+        cupName: '正本杯',
+        handicaps: { "松本": 0, "正本": 0, "渡邉": 0, "近藤": 0, "比企": 0, "内藤": 0 }
+    },
+    'kondo': {
+        cupName: '近藤杯',
+        handicaps: { "近藤": 0, "鹿中": 0 }
+    }
+};
+
+function resolveGroup(queryParams) {
+    const group = queryParams.group || '';
+    if (group && !GROUP_NAME_PATTERN.test(group)) {
+        throw Object.assign(new Error('不正なグループ名です'), { statusCode: 400 });
+    }
+    return group;
+}
+
+function keyPrefix(group) {
+    return group ? `${group}/` : '';
+}
+
+function groupDefaults(group) {
+    return GROUP_DEFAULTS[group] || GROUP_DEFAULTS[''];
+}
+
 export const handler = async (event) => {
     // レスポンスヘッダー（CORSは関数URL設定で管理）
     const headers = {
@@ -21,11 +55,14 @@ export const handler = async (event) => {
     const action = queryParams.action; // 'config', 'years', 'data'
 
     try {
+        // グループ(データ分離用プレフィックス)。未指定なら従来動作
+        const group = resolveGroup(queryParams);
+
         if (method === 'GET') {
             // アクション別の処理
             if (action === 'config') {
                 // 設定ファイルを取得
-                const config = await getConfig();
+                const config = await getConfig(group);
                 return {
                     statusCode: 200,
                     headers,
@@ -33,7 +70,7 @@ export const handler = async (event) => {
                 };
             } else if (action === 'years') {
                 // 利用可能な年度一覧を取得
-                const years = await getAvailableYears();
+                const years = await getAvailableYears(group);
                 return {
                     statusCode: 200,
                     headers,
@@ -41,7 +78,7 @@ export const handler = async (event) => {
                 };
             } else if (year) {
                 // 特定年度のデータを取得
-                const data = await getYearData(year);
+                const data = await getYearData(year, group);
                 return {
                     statusCode: 200,
                     headers,
@@ -75,7 +112,7 @@ export const handler = async (event) => {
 
             if (action === 'config') {
                 // 設定ファイルを保存
-                await saveConfig(bodyData);
+                await saveConfig(bodyData, group);
                 return {
                     statusCode: 200,
                     headers,
@@ -88,13 +125,13 @@ export const handler = async (event) => {
 
                 // replaceMode: true の場合はマージせずに上書き（削除操作用）
                 if (bodyData.replaceMode) {
-                    await saveYearDataDirect(yearToSave, bodyData);
+                    await saveYearDataDirect(yearToSave, bodyData, group);
                 } else {
-                    await saveYearData(yearToSave, bodyData);
+                    await saveYearData(yearToSave, bodyData, group);
                 }
 
                 // config.jsonのavailableYearsを更新
-                await updateAvailableYears(yearToSave);
+                await updateAvailableYears(yearToSave, group);
 
                 return {
                     statusCode: 200,
@@ -119,6 +156,13 @@ export const handler = async (event) => {
     } catch (error) {
         console.error('Lambda実行エラー:', error);
         console.error('エラースタック:', error.stack);
+        if (error.statusCode === 400) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: error.message })
+            };
+        }
         return {
             statusCode: 500,
             headers,
@@ -132,11 +176,11 @@ export const handler = async (event) => {
 };
 
 // 設定ファイルを取得
-async function getConfig() {
+async function getConfig(group = '') {
     try {
         const command = new GetObjectCommand({
             Bucket: BUCKET_NAME,
-            Key: CONFIG_FILE_KEY
+            Key: `${keyPrefix(group)}${CONFIG_FILE_KEY}`
         });
         const response = await s3Client.send(command);
         const data = await response.Body.transformToString();
@@ -146,14 +190,7 @@ async function getConfig() {
             // 設定ファイルがない場合はデフォルト値を返す
             return {
                 availableYears: [],
-                handicaps: {
-                    "松本": 0,
-                    "正本": 0,
-                    "渡邉": 0,
-                    "近藤": 0,
-                    "比企": 0,
-                    "内藤": 0
-                }
+                handicaps: { ...groupDefaults(group).handicaps }
             };
         }
         throw error;
@@ -161,10 +198,10 @@ async function getConfig() {
 }
 
 // 設定ファイルを保存
-async function saveConfig(config) {
+async function saveConfig(config, group = '') {
     const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: CONFIG_FILE_KEY,
+        Key: `${keyPrefix(group)}${CONFIG_FILE_KEY}`,
         Body: JSON.stringify(config, null, 2),
         ContentType: 'application/json'
     });
@@ -172,18 +209,20 @@ async function saveConfig(config) {
 }
 
 // 利用可能な年度一覧を取得
-async function getAvailableYears() {
+async function getAvailableYears(group = '') {
     try {
+        const prefix = keyPrefix(group);
         const command = new ListObjectsV2Command({
             Bucket: BUCKET_NAME,
-            Prefix: 'data-'
+            Prefix: `${prefix}data-`
         });
         const response = await s3Client.send(command);
 
         const years = [];
+        const pattern = new RegExp(`^${prefix}data-(\\d{4})\\.json$`);
         if (response.Contents) {
             response.Contents.forEach(obj => {
-                const match = obj.Key.match(/^data-(\d{4})\.json$/);
+                const match = obj.Key.match(pattern);
                 if (match) {
                     years.push(parseInt(match[1]));
                 }
@@ -198,11 +237,11 @@ async function getAvailableYears() {
 }
 
 // 特定年度のデータを取得
-async function getYearData(year) {
+async function getYearData(year, group = '') {
     try {
         const command = new GetObjectCommand({
             Bucket: BUCKET_NAME,
-            Key: `data-${year}.json`
+            Key: `${keyPrefix(group)}data-${year}.json`
         });
         const response = await s3Client.send(command);
         const data = await response.Body.transformToString();
@@ -216,7 +255,7 @@ async function getYearData(year) {
                 holeInOnes: [],
                 eagles: [],
                 albatrosses: [],
-                cupName: "正本杯"
+                cupName: groupDefaults(group).cupName
             };
         }
         throw error;
@@ -224,9 +263,9 @@ async function getYearData(year) {
 }
 
 // 年度別データを保存（既存データとマージ）
-async function saveYearData(year, newData) {
+async function saveYearData(year, newData, group = '') {
     // 既存データを取得
-    let existingData = await getYearData(year);
+    let existingData = await getYearData(year, group);
 
     // deleteRound が指定されている場合、既存データから該当ラウンドを削除
     // （コース名変更時に古いラウンドが残らないようにする）
@@ -245,11 +284,11 @@ async function saveYearData(year, newData) {
     delete dataToMerge.deleteRound;
 
     // データをマージ
-    const mergedData = mergeYearData(existingData, dataToMerge);
+    const mergedData = mergeYearData(existingData, dataToMerge, group);
 
     const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: `data-${year}.json`,
+        Key: `${keyPrefix(group)}data-${year}.json`,
         Body: JSON.stringify(mergedData, null, 2),
         ContentType: 'application/json'
     });
@@ -257,14 +296,14 @@ async function saveYearData(year, newData) {
 }
 
 // 年度別データを直接保存（マージなし、削除操作用）
-async function saveYearDataDirect(year, data) {
+async function saveYearDataDirect(year, data, group = '') {
     // replaceModeプロパティを除去して保存
     const saveData = { ...data };
     delete saveData.replaceMode;
 
     const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: `data-${year}.json`,
+        Key: `${keyPrefix(group)}data-${year}.json`,
         Body: JSON.stringify(saveData, null, 2),
         ContentType: 'application/json'
     });
@@ -272,14 +311,14 @@ async function saveYearDataDirect(year, data) {
 }
 
 // 年度データをマージ（既存データを保持しつつ新データを追加・更新）
-function mergeYearData(existingData, newData) {
+function mergeYearData(existingData, newData, group = '') {
     const merged = {
         year: newData.year || existingData.year,
         rounds: [],
         holeInOnes: existingData.holeInOnes || [],
         eagles: existingData.eagles || [],
         albatrosses: existingData.albatrosses || [],
-        cupName: newData.cupName || existingData.cupName || "正本杯"
+        cupName: newData.cupName || existingData.cupName || groupDefaults(group).cupName
     };
 
     // ラウンドデータをマージ
@@ -358,13 +397,13 @@ function mergeAchievements(existing, newItems) {
 }
 
 // config.jsonのavailableYearsを更新
-async function updateAvailableYears(year) {
-    const config = await getConfig();
+async function updateAvailableYears(year, group = '') {
+    const config = await getConfig(group);
     const yearNum = parseInt(year);
 
     if (!config.availableYears.includes(yearNum)) {
         config.availableYears.push(yearNum);
         config.availableYears.sort((a, b) => a - b);
-        await saveConfig(config);
+        await saveConfig(config, group);
     }
 }

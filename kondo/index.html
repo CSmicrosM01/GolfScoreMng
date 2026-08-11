@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ゴルフスコア管理</title>
+    <link rel="stylesheet" href="styles.css?v=20260306">
+</head>
+<body>
+    <!-- ログイン画面 -->
+    <div id="login-screen" class="screen">
+        <div class="login-container">
+            <h1>近藤杯</h1>
+            <h2>ゴルフスコア管理</h2>
+            <div class="year-selector">
+                <label for="year-select">年度選択:</label>
+                <select id="year-select">
+                    <!-- JSで動的に生成 -->
+                </select>
+            </div>
+            <div class="user-selector">
+                <p>ユーザーを選択してください</p>
+                <div id="user-buttons" class="user-buttons">
+                    <!-- JSで動的に生成 -->
+                </div>
+            </div>
+
+            <div class="login-stats">
+                <div class="login-stats-grid">
+                    <div class="login-stat-item">
+                        <h4>総合ランキング</h4>
+                        <div id="login-ranking-list" class="login-ranking-list">
+                            <!-- JSで動的に生成 -->
+                        </div>
+                    </div>
+                    <div class="login-stat-item">
+                        <h4>ベストスコア</h4>
+                        <div class="login-stat-value">
+                            <span id="login-best-score" class="stat-number">-</span>
+                            <span id="login-best-score-holder" class="stat-holder">-</span>
+                        </div>
+                    </div>
+                    <div class="login-stat-item">
+                        <h4>ベストパット平均</h4>
+                        <div class="login-stat-value">
+                            <span id="login-best-putt" class="stat-number">-</span>
+                            <span id="login-best-putt-holder" class="stat-holder">-</span>
+                        </div>
+                    </div>
+                    <div class="login-stat-item">
+                        <h4>パーオン率ベスト</h4>
+                        <div class="login-stat-value">
+                            <span id="login-best-paron" class="stat-number">-</span>
+                            <span id="login-best-paron-holder" class="stat-holder">-</span>
+                        </div>
+                    </div>
+                    <div class="login-stat-item">
+                        <h4>誤差ベスト</h4>
+                        <div class="login-stat-value">
+                            <span id="login-best-improvement" class="stat-number">-</span>
+                            <span id="login-best-improvement-holder" class="stat-holder">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- メイン画面 -->
+    <div id="main-screen" class="screen hidden">
+        <header>
+            <div class="header-left">
+                <h1 id="cup-title">2026近藤杯</h1>
+            </div>
+            <div class="header-right">
+                <button onclick="refreshData()" class="btn-refresh">最新データ取得</button>
+                <span id="current-user"></span>
+                <button id="logout-btn" class="btn-logout">ログアウト</button>
+            </div>
+        </header>
+
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="dashboard">ダッシュボード</button>
+            <button class="tab-btn" data-tab="ranking">ランキング</button>
+            <button class="tab-btn" data-tab="scores">スコア一覧</button>
+            <button class="tab-btn" data-tab="my-input">スコア入力</button>
+            <button class="tab-btn" data-tab="bulk-input">一括入力</button>
+            <button class="tab-btn" data-tab="handicap">ハンディキャップ</button>
+            <button class="tab-btn" data-tab="awards">各賞・ルール</button>
+            <button class="tab-btn" data-tab="help">操作方法</button>
+        </nav>
+
+        <main>
+            <!-- ダッシュボード -->
+            <section id="dashboard" class="tab-content active">
+                <div class="dashboard-grid">
+                    <div class="card highlight-card">
+                        <h3>ベストスコア</h3>
+                        <div class="award-display">
+                            <span class="big-number" id="best-score-value">-</span>
+                            <span class="award-holder" id="best-score-holder">-</span>
+                        </div>
+                    </div>
+                    <div class="card highlight-card">
+                        <h3>パット平均ベスト</h3>
+                        <div class="award-display">
+                            <span class="big-number" id="best-putt-value">-</span>
+                            <span class="award-holder" id="best-putt-holder">-</span>
+                        </div>
+                    </div>
+                    <div class="card highlight-card">
+                        <h3>パーオン率ベスト</h3>
+                        <div class="award-display">
+                            <span class="big-number" id="best-paron-value">-</span>
+                            <span class="award-holder" id="best-paron-holder">-</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>開催情報</h3>
+                        <div class="info-display">
+                            <p>総開催回数: <span id="total-rounds">-</span>回</p>
+                            <p>有効参加者: <span id="valid-participants">-</span>名</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>あなたの成績</h3>
+                        <div id="my-stats" class="my-stats">
+                            <p>参加回数: <span id="my-rounds">-</span>回</p>
+                            <p>平均スコア: <span id="my-avg-score">-</span></p>
+                            <p>ベストスコア: <span id="my-best-score">-</span></p>
+                            <p>平均パット: <span id="my-avg-putt">-</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>総合ランキング</h3>
+                    <p class="note">※3回以上参加者のみ（ハンディ適用）</p>
+                    <table class="ranking-table dashboard-ranking" id="dashboard-overall-ranking">
+                        <thead>
+                            <tr>
+                                <th>順位</th>
+                                <th>名前</th>
+                                <th>平均</th>
+                                <th>回数</th>
+                                <th>賞</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="card special-achievements">
+                    <h3>特別達成</h3>
+                    <div class="achievements-grid">
+                        <div class="achievement-item">
+                            <h4>ホールインワン達成者</h4>
+                            <ul id="hole-in-one-list">
+                                <li class="no-data">達成者なし</li>
+                            </ul>
+                        </div>
+                        <div class="achievement-item">
+                            <h4>アルバトロス達成者</h4>
+                            <ul id="albatross-list">
+                                <li class="no-data">達成者なし</li>
+                            </ul>
+                        </div>
+                        <div class="achievement-item">
+                            <h4>イーグル達成者</h4>
+                            <ul id="eagle-list">
+                                <li class="no-data">達成者なし</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ランキング -->
+            <section id="ranking" class="tab-content">
+                <div class="ranking-grid">
+                    <div class="card">
+                        <h3>総合順位（ネット - HC適用）</h3>
+                        <p class="note">※3回以上参加者のみ</p>
+                        <table class="ranking-table" id="overall-ranking-net">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>平均</th>
+                                    <th>回数</th>
+                                    <th>賞</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>総合順位（グロス - HCなし）</h3>
+                        <p class="note">※3回以上参加者のみ</p>
+                        <table class="ranking-table" id="overall-ranking-gross">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>平均</th>
+                                    <th>回数</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>ベストスコアランキング</h3>
+                        <table class="ranking-table" id="best-score-ranking">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>スコア</th>
+                                    <th>日付</th>
+                                    <th>コース</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>パット平均ランキング</h3>
+                        <p class="note">※3回以上参加者のみ</p>
+                        <table class="ranking-table" id="putt-ranking">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>平均</th>
+                                    <th>回数</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>パーオン率ランキング⭐️</h3>
+                        <p class="note">※3回以上参加者のみ</p>
+                        <table class="ranking-table" id="paron-ranking">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>パーオン率</th>
+                                    <th>回数</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>平均スコア変化ランキング⭐️</h3>
+                        <p class="note">※昨年・今年とも3回以上参加者のみ（マイナスが上達）</p>
+                        <table class="ranking-table" id="score-change-ranking">
+                            <thead>
+                                <tr>
+                                    <th>順位</th>
+                                    <th>名前</th>
+                                    <th>昨年平均</th>
+                                    <th>今年平均</th>
+                                    <th>変化</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- スコア一覧 -->
+            <section id="scores" class="tab-content">
+                <div class="scores-controls">
+                    <div class="filter-group">
+                        <label for="filter-user">ユーザー:</label>
+                        <select id="filter-user">
+                            <option value="all">全員</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-course">コース:</label>
+                        <select id="filter-course">
+                            <option value="all">すべて</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table class="scores-table" id="scores-table">
+                            <thead>
+                                <tr>
+                                    <th>回</th>
+                                    <th>日付</th>
+                                    <th>コース</th>
+                                    <th>人数</th>
+                                    <th>近藤</th>
+                                    <th>鹿中</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- スコア入力（個人用） -->
+            <section id="my-input" class="tab-content">
+                <div class="card">
+                    <h3>自分のスコアを入力</h3>
+                    <p class="note">ログイン中: <span id="my-input-user"></span></p>
+
+                    <div class="form-group">
+                        <label for="my-input-year">年度:</label>
+                        <select id="my-input-year">
+                            <!-- JSで動的に生成 -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="my-input-date">日付:</label>
+                        <input type="date" id="my-input-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="my-input-course">コース:</label>
+                        <div class="course-input-wrapper">
+                            <input type="text" id="my-input-course" placeholder="コース名を入力">
+                            <span class="course-select-arrow">&#9662;</span>
+                            <select id="my-input-course-select" class="course-select-btn">
+                                <option value=""></option>
+                            </select>
+                        </div>
+                        <datalist id="course-list"></datalist>
+                    </div>
+
+                    <div class="score-input-single">
+                        <div class="form-group">
+                            <label for="my-input-score">スコア:</label>
+                            <input type="number" id="my-input-score" placeholder="例: 95" min="50" max="200" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label for="my-input-putt">パット数:</label>
+                            <input type="number" id="my-input-putt" placeholder="例: 36" min="10" max="80" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label for="my-input-paron">パーオン率(%):</label>
+                            <input type="number" id="my-input-paron" placeholder="0" min="0" max="100" step="0.1" inputmode="decimal">
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button id="save-my-score-btn" class="btn-primary btn-large">保存</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>最近の自分のスコア</h3>
+                    <div id="my-recent-scores"></div>
+                </div>
+            </section>
+
+            <!-- 一括入力 -->
+            <section id="bulk-input" class="tab-content">
+                <div class="card">
+                    <h3 id="bulk-input-title">全員のスコアを一括入力</h3>
+                    <div class="form-row">
+                        <button id="new-score-btn" class="btn-secondary">新規入力</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-year">年度:</label>
+                        <select id="input-year">
+                            <!-- JSで動的に生成 -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-date">日付:</label>
+                        <input type="date" id="input-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-course">コース:</label>
+                        <div class="course-input-wrapper">
+                            <input type="text" id="input-course" placeholder="コース名を入力">
+                            <span class="course-select-arrow">&#9662;</span>
+                            <select id="input-course-select" class="course-select-btn">
+                                <option value=""></option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>スコア入力</h3>
+                    <div id="score-inputs" class="score-inputs">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>特別達成（あれば入力）</h3>
+                    <div class="special-input">
+                        <div class="form-group">
+                            <label for="hole-in-one-input">ホールインワン:</label>
+                            <select id="hole-in-one-input">
+                                <option value="">なし</option>
+                            </select>
+                            <input type="number" id="hole-in-one-hole" placeholder="ホール番号" min="1" max="18" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label for="albatross-input">アルバトロス:</label>
+                            <select id="albatross-input">
+                                <option value="">なし</option>
+                            </select>
+                            <input type="number" id="albatross-hole" placeholder="ホール番号" min="1" max="18" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label for="eagle-input">イーグル:</label>
+                            <select id="eagle-input">
+                                <option value="">なし</option>
+                            </select>
+                            <input type="number" id="eagle-hole" placeholder="ホール番号" min="1" max="18" inputmode="numeric">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="save-score-btn" class="btn-primary">保存</button>
+                    <button id="delete-score-btn" class="btn-danger hidden" onclick="deleteRound()">削除</button>
+                </div>
+
+                <div class="card">
+                    <h3>データ管理</h3>
+                    <div class="button-group">
+                        <button id="export-btn" class="btn-secondary">エクスポート</button>
+                        <button id="import-btn" class="btn-secondary">インポート</button>
+                        <input type="file" id="import-file" accept=".json" style="display: none;">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ハンディキャップ -->
+            <section id="handicap" class="tab-content">
+                <div class="card">
+                    <h3>ハンディキャップ一覧</h3>
+                    <p class="help-text">直近20ラウンドのベスト8を基にWHS（ワールドハンディキャップシステム）で計算されます。</p>
+                    <p class="help-text"><strong>※2026年度〜：</strong>1月と6月に更新ボタンを押して、ハンディキャップを確定させてください。</p>
+                    <div class="button-group">
+                        <button id="update-handicap-btn" class="btn-primary">ハンディキャップを更新</button>
+                    </div>
+                    <div id="handicap-list" class="handicap-list">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 id="handicap-detail-title">ハンディキャップ詳細</h3>
+                    <div id="handicap-detail" class="handicap-detail">
+                        <p class="no-data">ユーザーを選択してください</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 各賞・ルール -->
+            <section id="awards" class="tab-content">
+                <div class="card">
+                    <h3>カップ名設定</h3>
+                    <div class="cup-name-settings">
+                        <p class="help-text">年度ごとのカップ名を設定できます。優勝者の名前が翌年のカップ名になります。</p>
+                        <div class="cup-name-input-group">
+                            <label for="cup-name-input">カップ名:</label>
+                            <input type="text" id="cup-name-input" placeholder="例: 近藤杯" maxlength="20">
+                            <button id="save-cup-name-btn" class="btn-primary">保存</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>コース名管理</h3>
+                    <p class="help-text">スコア入力時にドロップダウンに表示されるコース名を管理できます。スコアデータに含まれるコース名は自動的に表示されます。</p>
+                    <div class="course-manage-input-group">
+                        <input type="text" id="course-name-input" placeholder="コース名を入力" maxlength="30">
+                        <button id="add-course-name-btn" class="btn-primary">追加</button>
+                    </div>
+                    <div id="course-name-list" class="course-name-list"></div>
+                </div>
+
+                <div class="card">
+                    <h3>開催・参加条件</h3>
+                    <ul class="rules-list">
+                        <li>ラウンド参加人数が<strong>2名以上</strong>であること</li>
+                        <li>ラウンドに<strong>3回以上参加</strong>していること</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>カップ名の名前権利（2026年度〜）</h3>
+                    <p class="help-text">以下の優先順位で来年度のカップ名が決まります：</p>
+                    <ol class="rules-list">
+                        <li><strong>ベスト更新（80未満）</strong></li>
+                        <li><strong>アルバトロス達成者</strong></li>
+                        <li><strong>ホールインワン達成者</strong></li>
+                        <li><strong>イーグル達成者</strong></li>
+                        <li><strong>グロス1位</strong></li>
+                    </ol>
+                    <p class="note">※カップの帯に名前を書くのはグロスの1位</p>
+                </div>
+
+                <div class="card">
+                    <h3>各賞（HC込みアベレージ順位）</h3>
+                    <table class="awards-table">
+                        <tbody>
+                            <tr class="gold">
+                                <td>1位</td>
+                                <td>6位からラウンドの昼食代をプレゼントしてもらう ※</td>
+                            </tr>
+                            <tr class="silver">
+                                <td>2位</td>
+                                <td>5位からラウンドの昼食代をプレゼントしてもらう ※</td>
+                            </tr>
+                            <tr>
+                                <td>3位</td>
+                                <td>なし</td>
+                            </tr>
+                            <tr>
+                                <td>4位</td>
+                                <td>なし</td>
+                            </tr>
+                            <tr class="penalty">
+                                <td>5位</td>
+                                <td>2位にラウンドの昼食代をプレゼント ※</td>
+                            </tr>
+                            <tr class="penalty">
+                                <td>6位</td>
+                                <td>1位にラウンドの昼食代をプレゼント ※</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="note">※：食事付いていないプランで全額</p>
+                </div>
+
+                <div class="card">
+                    <h3>特別賞（2026年度〜）</h3>
+                    <div class="special-awards">
+                        <div class="special-award-item">
+                            <h4>⭐️ パーオン率ランキング1位</h4>
+                            <p>今年のラウンドのパーオン率が最も高い人に贈られる賞</p>
+                            <p class="note"><strong>賞品：</strong>ご要望のゴルフボール（5,000円〜6,000円相当）</p>
+                        </div>
+                        <div class="special-award-item">
+                            <h4>⭐️ 平均誤差賞</h4>
+                            <p>昨年度と今年度の平均を比較し、スコアが一番上がった人（最も上達した人）に贈られる賞</p>
+                            <p class="note"><strong>賞品：</strong>ご要望のゴルフボール（5,000円〜6,000円相当）</p>
+                        </div>
+                    </div>
+                    <p class="note">※2025年度までのベストスコア賞・平均パット数ランキング1位は廃止されました</p>
+                </div>
+
+                <div class="card">
+                    <h3>パット数のルール</h3>
+                    <ul class="rules-list">
+                        <li>パット数はグリーン上でパットした数</li>
+                        <li>一度グリーンを出てもリセットされない</li>
+                        <li>OKもパット数に含める</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>ハンディキャップについて（2026年度〜）</h3>
+                    <p><strong>算出タイミング：</strong>年2回（1月開始時、6月）</p>
+                    <p>ハンディキャップは直近20ラウンドのベスト8から自動計算されます。</p>
+                    <p>「ハンディキャップ」画面で「更新」ボタンを押すと、現在のスコアから再計算されます。</p>
+                    <p class="note">※1月と6月に更新ボタンを押して、ハンディキャップを確定させてください</p>
+                </div>
+            </section>
+
+            <!-- 操作方法 -->
+            <section id="help" class="tab-content">
+                <div class="card">
+                    <h3>基本的な使い方</h3>
+                    <div class="help-section">
+                        <h4>1. ログイン</h4>
+                        <p>トップ画面で自分の名前をタップしてログインします。ログイン画面では各ランキングのトップと達成者を確認できます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>2. スコアの入力方法</h4>
+                        <ul class="rules-list">
+                            <li><strong>スコア入力</strong>: 自分のスコア、パット数、パーオン率（%）を簡単に入力できます</li>
+                            <li><strong>一括入力</strong>: 全員のスコア、パット数、パーオン率（%）をまとめて入力できます（幹事向け）</li>
+                            <li>パーオン率はスコアアプリに表示される統合パーオン率を入力してください</li>
+                            <li>ホールインワン、イーグル、アルバトロスは一括入力画面で記録できます</li>
+                        </ul>
+                    </div>
+                    <div class="help-section">
+                        <h4>3. スコアの編集・削除</h4>
+                        <p>「スコア一覧」で編集したいラウンドの「編集」ボタンをタップすると、一括入力画面で修正できます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>4. ハンディキャップについて</h4>
+                        <p>ハンディキャップは<strong>WHS（ワールドハンディキャップシステム）</strong>により自動計算されます。スコアを保存すると自動的に更新されます。</p>
+                        <p>年2回（1月・6月）は「ハンディキャップ」タブの「ハンディキャップを更新」ボタンで固定値を設定します。</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>各画面の説明</h3>
+                    <div class="help-section">
+                        <h4>ダッシュボード</h4>
+                        <p>ベストスコア、パット平均ベスト、パーオン率ベストの現在の1位と、自分の成績、総合ランキングを確認できます。</p>
+                        <p>ホールインワン、イーグル、アルバトロスの達成者も表示されます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>ランキング</h4>
+                        <p>以下のランキングを確認できます：</p>
+                        <ul class="rules-list">
+                            <li><strong>総合順位（ネット）</strong>: ハンディキャップ適用後の平均スコアランキング</li>
+                            <li><strong>総合順位（グロス）</strong>: ハンディキャップなしの平均スコアランキング</li>
+                            <li><strong>ベストスコア</strong>: 最高スコアのランキング</li>
+                            <li><strong>パット平均</strong>: 平均パット数のランキング</li>
+                            <li><strong>⭐️ パーオン率</strong>: パーオン率の高い順ランキング（2026年度〜）</li>
+                            <li><strong>⭐️ 平均スコア変化</strong>: 昨年度と比較して最も上達した人のランキング（2026年度〜）</li>
+                        </ul>
+                    </div>
+                    <div class="help-section">
+                        <h4>スコア一覧</h4>
+                        <p>全ラウンドのスコア、パット数、パーオン率（%）を一覧で確認できます。ユーザーやコースでフィルタリングも可能です。</p>
+                        <p>参加人数2名未満のラウンドは薄く表示され、ランキングには反映されません。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>ハンディキャップ</h4>
+                        <p>全ユーザーのハンディキャップインデックスを確認できます。ユーザー名をタップすると詳細（対象ラウンド数、ベスト8スコア）が表示されます。</p>
+                        <p>「ハンディキャップを更新」ボタンで、年2回（1月・6月）に現在のHCを固定できます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>各賞・ルール</h4>
+                        <p>大会のルールと各賞の内容（2026年度対応）、特別賞、カップ名の名前権利、カップ名の変更ができます。</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>データ共有について</h3>
+                    <div class="help-section">
+                        <h4>最新データの取得</h4>
+                        <p>画面上部の「<strong>最新データ取得</strong>」ボタンをタップすると、AWS S3から最新データを取得できます。他の端末で更新されたデータが反映されます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>データの自動同期</h4>
+                        <p>スコアを保存すると、自動的にAWS S3に同期されます。他の端末では「最新データ取得」をタップすると最新の状態になります。</p>
+                        <p>年度別にデータが管理されており、画面上部で年度を切り替えられます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>データのバックアップ</h4>
+                        <p>「一括入力」画面の「エクスポート」でデータをJSON形式でファイルに保存できます。「インポート」で復元できます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>有効なラウンド</h4>
+                        <p>参加人数が2名以上のラウンドのみがランキングに反映されます。2名未満のラウンドは薄く表示されます。</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>設定について</h3>
+                    <div class="help-section">
+                        <h4>カップ名の変更</h4>
+                        <p>「各賞・ルール」画面で年度ごとのカップ名を変更できます。</p>
+                        <p>カップ名の名前権利は以下の優先順位で決まります：</p>
+                        <ul class="rules-list">
+                            <li>1. ベストスコア更新（80未満）</li>
+                            <li>2. アルバトロス達成</li>
+                            <li>3. ホールインワン達成</li>
+                            <li>4. イーグル達成</li>
+                            <li>5. グロス1位（ハンディキャップなし）</li>
+                        </ul>
+                    </div>
+                    <div class="help-section">
+                        <h4>ハンディキャップについて</h4>
+                        <p>ハンディキャップはWHSにより自動計算されます。直近20ラウンドのベスト8から算出されます。</p>
+                        <p>年2回（1月・6月）は「ハンディキャップ」タブの「ハンディキャップを更新」ボタンで、その時点のHCを固定できます。</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>よくある質問</h3>
+                    <div class="help-section">
+                        <h4>Q: スコアを間違えて入力した</h4>
+                        <p>A: 「スコア一覧」から該当ラウンドの「編集」ボタンをタップして修正してください。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: 他の人のスコアを入力したい</h4>
+                        <p>A: 「一括入力」画面で全員分のスコア、パット数、パーオン率（%）を入力できます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: 他の端末で入力したデータが表示されない</h4>
+                        <p>A: 画面上部の「最新データ取得」ボタンをタップしてください。AWS S3から最新データが取得されます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: カップ名を変更したい</h4>
+                        <p>A: 「各賞・ルール」画面の「カップ名設定」でカップ名を変更できます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: ハンディキャップはどう計算されるの？</h4>
+                        <p>A: WHS（ワールドハンディキャップシステム）により、直近20ラウンドのベスト8から自動計算されます。スコアを保存すると自動更新されます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: パーオン率はどう入力するの？</h4>
+                        <p>A: スコアアプリに表示される統合パーオン率（%）を入力してください。コースごとのパーオン情報を考慮した値をアプリで管理しているため、その統合率を使用します。3回以上参加した人のみランキングに表示されます。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: 昨年度のデータを見たい</h4>
+                        <p>A: 画面上部の年度選択で切り替えられます。年度ごとにデータが管理されています。</p>
+                    </div>
+                    <div class="help-section">
+                        <h4>Q: ホールインワンやイーグルはどう記録するの？</h4>
+                        <p>A: 「一括入力」画面の「特別記録」セクションで、ホールインワン、イーグル、アルバトロスを記録できます。</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 近藤/鹿中グループは初期データ(data.js)を読み込まない（S3のkondo/配下データのみ使用） -->
+    <script src="app.js?v=20260306"></script>
+</body>
+</html>
